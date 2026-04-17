@@ -1,0 +1,13 @@
+# Phase 10: LlamaIndex data-centric Agent examples.
+#
+# This file is intentionally small. It avoids installing the heavier
+# sentence-transformers / CrewAI / AutoGen dependency trees when studying only
+# LlamaIndex.
+
+python-dotenv>=1.0.0
+llama-index==0.14.20
+llama-index-core==0.14.20
+llama-index-embeddings-openai==0.6.0
+llama-index-llms-openai==0.7.5
+llama-index-llms-openai-like==0.7.1
+llama-index-workflows==2.19.0

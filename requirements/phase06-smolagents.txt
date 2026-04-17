@@ -1,0 +1,6 @@
+# Phase 06: smolagents CodeAgent examples.
+
+-r base.txt
+
+smolagents==1.24.0
+litellm==1.74.9

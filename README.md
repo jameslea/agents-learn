@@ -47,8 +47,18 @@ graph TD
 # 克隆项目后
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+
+# 推荐：按当前学习阶段安装轻量依赖
+pip install -r requirements/base.txt
+
+# 示例：只学习阶段 10 LlamaIndex 时
+pip install -r requirements/phase10-llamaindex.txt
+
+# 如需一次性安装所有阶段依赖，再使用全量入口
+# pip install -r requirements.txt
 ```
+
+> 注意：`requirements.txt` 是全量聚合入口，会安装 CrewAI、AutoGen、sentence-transformers、LlamaIndex 等多个生态的依赖，解析和下载时间较长。日常学习建议优先使用 `requirements/` 下的分阶段依赖文件。
 
 **环境变量配置**：
 请在 `.env` 文件中配置以下内容：

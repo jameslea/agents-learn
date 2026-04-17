@@ -1,0 +1,5 @@
+# Phase 08 and 09: AutoGen chat and code execution examples.
+
+-r base.txt
+
+pyautogen==0.10.0

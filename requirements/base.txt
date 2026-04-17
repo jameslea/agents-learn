@@ -1,0 +1,10 @@
+# Shared dependencies used by the early LangChain / LangGraph stages.
+
+langchain>=1.0.0
+langchain-core>=1.0.0
+langchain-openai>=1.0.0
+langgraph>=1.0.0
+langchain-community>=0.4.0
+wikipedia>=1.4.0
+python-dotenv>=1.0.0
+grandalf>=0.8
