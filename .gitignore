@@ -1,8 +1,60 @@
+# Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
 
+# Virtual environment
 venv/
 .venv/
 
+# Dependencies (install from requirements.txt instead)
+# pip install -r requirements.txt
+# DO NOT commit installed packages
+# lib/
+# include/
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Agent Skills (AI智能体技能缓存)
+.agents/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# LangChain / LangGraph (cache + logs)
+.cache/
+.langchain/
+.langgraph/
+.mypy_cache/
+.pytest_cache/
+
+# Local data (if agents produce output files)
+data/
 outputs/
+*.db
+*.sqlite
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# RAG Data
+chroma_db/
+**/chroma_db/
+**/workspace/
