@@ -9,6 +9,7 @@
 - **生产级 Self-RAG**：基于 LangGraph 实现的具备“自愈、自评、自检索”能力的 RAG 系统，包含全链路可观测性监控。
 - **多框架横向实验室**：同一业务场景在 **LangGraph**, **smolagents**, **CrewAI**, **AutoGen** 下的不同实现与性能对比。
 - **代码执行深度机制**：深度剖析了“AST 沙箱模拟”与“物理进程隔离”两种代码执行方案的差异。
+- **第二阶段路线图**：继续扩展 LlamaIndex、MetaGPT、AutoGPT/BabyAGI、技能库、Dify/Coze 与生产级 Agent 工程。
 
 ## 🏗️ 核心架构可视化：Self-RAG (阶段 05)
 
@@ -70,11 +71,27 @@ pip install -r requirements.txt
 | **08** | [AutoGen](./08-autogen-intro/) | **对话式自愈**：Agent 之间的聊天、自动运行代码与报错修正 |
 | **09** | [**执行机制深度挖掘**](./09-execution-depth/) | 深度辨析 AST 解析与 Subprocess 执行的安全性与差异 |
 
+### 第二阶段：从框架分类到模式体系
+
+第一阶段解决的是“如何构建一个能调用工具、管理状态、协作执行任务的 Agent”。第二阶段将继续研究更完整的 Agent 模式体系：
+
+| 阶段 | 方向 | 学习重点 | 状态 |
+| :--- | :--- | :--- | :--- |
+| **10** | [LlamaIndex 数据中心型 Agent](./10-llamaindex-agent/) | 数据索引、Query Engine、Agentic RAG、企业知识库 | 未完成 |
+| **11** | [MetaGPT / SOP 多 Agent](./11-metagpt-sop/) | 软件工程 SOP、结构化中间产物、角色协作约束 | 未完成 |
+| **12** | [自主任务循环 Agent](./12-autonomous-agents/) | AutoGPT / BabyAGI 风格的任务队列、反思、停止条件 | 未完成 |
+| **13** | [技能库与长期学习](./13-skill-library-agent/) | Voyager 风格技能沉淀、检索复用、版本管理 | 未完成 |
+| **14** | [低代码 Agent 平台](./14-lowcode-agent-platforms/) | Dify / Coze 的工作流、知识库、插件和发布能力 | 未完成 |
+| **15** | [生产级 Agent 工程](./15-production-agent-engineering/) | 评估、观测、安全、权限、失败恢复、人类介入 | 未完成 |
+
+完整路线见：[**Agent 第二阶段学习路线图**](./docs/plan2.md)。
+
 ---
 
 ## 📖 核心总结与图谱
 
 - [**AGENTS_KNOWLEDGE_MAP.md**](./AGENTS_KNOWLEDGE_MAP.md)：本项目最终沉淀的 **Agent 开发全景知识图谱**，涵盖了四大框架的性格对比及选择建议。
+- [**docs/plan2.md**](./docs/plan2.md)：第二阶段学习路线图，围绕 Agent 框架分类、模式体系和后续阶段规划展开。
 
 ---
 
