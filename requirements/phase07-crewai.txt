@@ -1,0 +1,5 @@
+# Phase 07: CrewAI collaboration examples.
+
+-r base.txt
+
+crewai==0.193.2

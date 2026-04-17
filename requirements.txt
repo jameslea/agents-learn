@@ -1,33 +1,14 @@
-# Core
-langchain>=1.0.0
-langchain-core>=1.0.0
-langchain-openai>=1.0.0
+# Full environment for all learning stages.
+#
+# For day-to-day study, prefer installing only the stage you are working on:
+#   venv/bin/pip install -r requirements/phase10-llamaindex.txt
+#
+# This aggregate file is intentionally broad and may install many heavy
+# transitive dependencies.
 
-# Agents
-langgraph>=1.0.0
-
-# Tools
-langchain-community>=0.4.0
-wikipedia>=1.4.0
-
-# Memory / Vector stores
-faiss-cpu>=1.13.0
-chromadb>=1.0.0
-
-# Utilities
-python-dotenv>=1.0.0
-grandalf>=0.8
-
-# RAG & Web Search (Phase 5)
-beautifulsoup4>=4.12.0
-tavily-python>=0.3.0
-langchain-chroma>=0.1.0
-langchain-huggingface>=0.0.3
-sentence-transformers>=3.0.0
-langfuse>=2.0.0
-
-# Multi-Agent Frameworks
-smolagents
-litellm
-crewai
-pyautogen
+-r requirements/base.txt
+-r requirements/phase05-rag.txt
+-r requirements/phase06-smolagents.txt
+-r requirements/phase07-crewai.txt
+-r requirements/phase08-autogen.txt
+-r requirements/phase10-llamaindex.txt
