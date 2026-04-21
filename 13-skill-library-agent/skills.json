@@ -1,0 +1,12 @@
+{
+  "迭代动态规划计算斐波那契数列": {
+    "name": "迭代动态规划计算斐波那契数列",
+    "description": "使用迭代动态规划方法高效计算斐波那契数列，通过自底向上的方式避免递归导致的性能问题和栈溢出风险，同时保持代码简洁和可读性。该方法时间复杂度为O(n)，空间复杂度可优化至O(1)。",
+    "code_snippet": "def fibonacci(n):\n    if n <= 1:\n        return n\n    prev, curr = 0, 1\n    for i in range(2, n + 1):\n        prev, curr = curr, prev + curr\n    return curr"
+  },
+  "斐波那契数列前 n 项和计算": {
+    "name": "斐波那契数列前 n 项和计算",
+    "description": "计算斐波那契数列前 n 项的和。已知斐波那契数列定义为 F(1)=1, F(2)=1, F(n)=F(n-1)+F(n-2)（n≥3），则前 n 项和 S(n) 可通过公式 S(n) = F(n+2) - 1 直接计算，无需逐项累加。",
+    "code_snippet": "def fibonacci_sum(n):\n    \"\"\"返回斐波那契数列前 n 项的和。\"\"\"\n    if n <= 0:\n        return 0\n    # 计算 F(n+2)\n    a, b = 1, 1  # F(1) 和 F(2)\n    for _ in range(3, n + 3):  # 迭代到 F(n+2)\n        a, b = b, a + b\n    return b - 1  # S(n) = F(n+2) - 1"
+  }
+}

@@ -1,7 +1,7 @@
 # 阶段 10 总结：LlamaIndex 数据中心型 Agent
 
-> 状态：未完成
-> 本文是阶段复盘模板。完成 `llamaindex_agent.py` 后，再回填实际代码观察、运行结果和阶段结论。
+> 状态：已完成
+> 本文是阶段复盘总结。已完成 `llamaindex_agent.py` 的编写与真实环境运行验证。
 
 ---
 
@@ -34,10 +34,8 @@
 - 使用 `FunctionAgent` 作为阶段 10 的最小数据中心型 Agent。
 - 额外提供 `list_loaded_documents` 函数工具，用于观察当前索引加载了哪些文档。
 
-待补充：
-
-- 安装 LlamaIndex 依赖后，记录完整运行输出。
-- 根据真实运行情况确认当前版本 API 是否需要调整。
+- 依赖安装成功，包含 `llama-index-core`、`llama-index-llms-openai-like` 等。
+- 验证了 `FunctionAgent` 在 OpenAI 兼容模式下的工具调用稳定性。
 
 ---
 
@@ -82,7 +80,27 @@ venv/bin/python 10-llamaindex-agent/llamaindex_agent.py
   pip install -r requirements.txt
 ```
 
-待补充：安装依赖并配置模型后，记录真实 Agent 输出。
+运行脚本：`venv/bin/python 10-llamaindex-agent/llamaindex_agent.py`
+
+**Agent 最终回答（节选）：**
+
+> 根据学习文档，LlamaIndex 和 LangGraph 的核心分工如下：
+> 
+> **LlamaIndex 的核心职责：**
+> 1. 数据接入与索引构建 - 专门处理各种数据源的接入和索引创建
+> 2. 检索功能 - 提供强大的文档检索能力
+> 3. 知识库问答 - 特别适合处理复杂文档和知识库的问答场景
+> 
+> **LangGraph 的核心职责：**
+> 1. 状态管理 - 专注于智能体状态的管理和维护
+> 2. 流程控制 - 通过图结构定义执行路径和循环逻辑
+> 
+> 简单来说：**LlamaIndex 是"数据专家"，LangGraph 是"流程专家"**。
+
+**工具调用验证：**
+当询问“你加载了哪些学习文档？”时，Agent 成功调用了 `list_loaded_documents` 自定义函数工具，返回了：
+1. concept.md
+2. summary.md
 
 ---
 
@@ -94,12 +112,12 @@ venv/bin/python 10-llamaindex-agent/llamaindex_agent.py
 
 | 维度 | LlamaIndex 示例 | LangGraph Self-RAG |
 | :--- | :--- | :--- |
-| 数据接入 | 待补充 | 待补充 |
-| 索引与检索 | 待补充 | 待补充 |
-| 状态管理 | 待补充 | 待补充 |
-| 流程控制 | 待补充 | 待补充 |
-| 可观测性 | 待补充 | 待补充 |
-| 适用场景 | 待补充 | 待补充 |
+| 数据接入 | 极简：`SimpleDirectoryReader` 几行代码搞定 | 较复杂：需手动处理加载与切分 |
+| 索引与检索 | 原生集成：`VectorStoreIndex` 支持多种检索策略 | 需配合向量数据库：如 Chroma/FAISS 需手动编排 |
+| 状态管理 | 隐式：由 Agent 框架内部管理（Workflow 模式） | 显式：由开发者定义 State 结构 |
+| 流程控制 | 事件驱动或自动循环（FunctionAgent） | 图结构：显式定义 Node 和 Edge |
+| 可观测性 | 深度集成：LlamaTrace 等 | 灵活：需集成 LangSmith 等 |
+| 适用场景 | 快速构建知识库问答、复杂数据 RAG | 复杂逻辑编排、多 Agent 协作、审批流 |
 
 ---
 
@@ -121,12 +139,9 @@ venv/bin/python 10-llamaindex-agent/llamaindex_agent.py
 
 ## 七、阶段结论
 
-待补充：完成阶段 10 后填写。
-
-最终应该回答：
-
-- LlamaIndex 在数据中心型 Agent 中解决了什么问题？
-- 它和 LangGraph 的职责边界是什么？
-- 什么场景优先选择 LlamaIndex？
-- 什么场景更适合 LangGraph 作为主控？
-- 两者如何组合到一个生产级 Agent 系统里？
+- **LlamaIndex 解决了数据工程问题**：它将复杂的文档解析、分块、向量化和检索封装成标准组件，极大降低了 RAG 系统的开发门槛。
+- **职责边界清晰**：LlamaIndex 负责“数据检索与知识合成”；LangGraph 负责“任务编排与状态流转”。
+- **选型与组合**：
+    - 简单的知识库助手优先用 LlamaIndex。
+    - 具有复杂判断逻辑、需要人工介入或多步骤循环的任务优先用 LangGraph。
+    - **黄金组合**：在 LangGraph 的 Node 中调用 LlamaIndex 的 Query Engine 作为子任务执行器。
