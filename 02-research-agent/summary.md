@@ -65,7 +65,7 @@ LangChain 运行时，会在底层启动 Pydantic 解析器，悄悄把你编写
     每次通过 `.invoke()` 时必须严格带上的钥匙决定了一切。
     ```python
     # 只要这个标识不变，无论你在第几轮进行调用，档案员总是会抽出特定的那份账本给大模型过目。
-    config = {"configurable": {"thread_id": "session_zhaoguifu_vip"}}
+    config = {"configurable": {"thread_id": "session_user_001"}}
     agent_executor.invoke({"messages": [...]}, config=config)
     ```
 
