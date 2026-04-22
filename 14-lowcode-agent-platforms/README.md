@@ -18,10 +18,11 @@
 
 ---
 
-## 文档说明
+## 代码与文档
 
 | 文件 | 说明 |
 |---|---|
+| `platform_client_demo.py` | Dify API 客户端集成示例，展示代码与低代码平台的交互 |
 | `concept.md` | 低代码平台核心概念与底层逻辑映射 |
 | `dify_vs_coze.md` | Dify 与 Coze 的深度对比分析 |
 
