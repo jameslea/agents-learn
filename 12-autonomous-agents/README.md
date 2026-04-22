@@ -11,8 +11,9 @@
 - 执行结果反思与后续任务更新。
 - 停止条件、成本控制和 Human-in-the-loop 检查点。
 
-## 预计产物
+## 代码示例
 
-- `task_queue_agent.py`
+- `babyagi_native.py`：原生手写 `while` 循环版本的 BabyAGI。
+- `babyagi_langgraph.py`：使用 LangGraph 状态图框架重构的工业级稳健版本。
 - `concept.md`
 - `summary.md`
