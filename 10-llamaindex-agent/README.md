@@ -1,6 +1,6 @@
 # 阶段 10：LlamaIndex 数据中心型 Agent
 
-> 状态：未完成
+> 状态：✅ 已完成
 
 本阶段计划研究 LlamaIndex 在数据接入、索引、Query Engine 和 Agentic RAG 中的优势，并与阶段 05 的 LangGraph Self-RAG 进行对比。
 
