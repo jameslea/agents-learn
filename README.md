@@ -97,12 +97,12 @@ pip install -r requirements/phase10-llamaindex.txt
 | :--- | :--- | :--- | :---: |
 | **10** | [LlamaIndex 数据中心型 Agent](./10-llamaindex-agent/) | 数据索引、Query Engine、Agentic RAG、企业知识库 | ✅ |
 | **11** | [MetaGPT / SOP 多 Agent](./11-metagpt-sop/) | 软件工程 SOP、结构化中间产物、角色协作约束 | ✅ |
-| **12** | [自主任务循环 Agent](./12-autonomous-agents/) | AutoGPT / BabyAGI 风格的任务队列、反思、停止条件 | 🚧 |
-| **13** | [技能库与长期学习](./13-skill-library-agent/) | Voyager 风格技能沉淀、检索复用、版本管理 | 📋 |
-| **14** | [低代码 Agent 平台](./14-lowcode-agent-platforms/) | Dify / Coze 的工作流、知识库、插件和发布能力 | 📋 |
-| **15** | [生产级 Agent 工程](./15-production-agent-engineering/) | 评估、观测、安全、权限、失败恢复、人类介入 | 📋 |
+| **12** | [自主任务循环 Agent](./12-autonomous-agents/) | AutoGPT / BabyAGI 风格的任务队列、反思、停止条件 | ✅ |
+| **13** | [技能库与长期学习](./13-skill-library-agent/) | Voyager 风格技能沉淀、检索复用、版本管理 | ✅ |
+| **14** | [低代码 Agent 平台](./14-lowcode-agent-platforms/) | Dify / Coze 的工作流、知识库、插件和发布能力 | ✅ |
+| **15** | [生产级 Agent 工程](./15-production-agent-engineering/) | 评估、观测、安全、权限、失败恢复、人类介入 | ✅ |
 
-> ✅ 已完成 · 🚧 进行中（代码已写，文档待完善） · 📋 待开始
+> ✅ 全部 15 个阶段已完成
 
 完整路线见：[**Agent 第二阶段学习路线图**](./docs/plan2.md)。
 
