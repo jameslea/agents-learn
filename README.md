@@ -1,122 +1,107 @@
-# 深入浅出 AI Agents：从核心原理到多框架实战
+# 深入浅出 AI Agents：从核心原理到全栈实战
 
-本项目是一个系统化的 AI Agents 学习仓库。记录了从最基础的工具调用、记忆系统，到生产级 LangGraph 复杂图架构，以及主流 Agent 框架（smolagents, CrewAI, AutoGen, LlamaIndex, MetaGPT）横向对比的完整演进过程。
+> **这是一个系统化的 AI Agents 开发者学习路线。** 涵盖了从最基础的原子组件（Tools/Memory）、生产级架构（LangGraph/Self-RAG）、主流 Agent 框架横向对比（CrewAI/AutoGen）、到前沿模式（SOP/技能库/自主循环）的全方位实战。
 
 ---
 
-## 🌟 核心亮点
+## 🌟 本项目能带给你什么？
 
-- **生产级 Self-RAG**：基于 LangGraph 实现的具备"自愈、自评、自检索"能力的 RAG 系统，包含全链路可观测性监控。
-- **多框架横向实验室**：同一业务场景在 **LangGraph**, **smolagents**, **CrewAI**, **AutoGen** 下的不同实现与性能对比。
-- **代码执行深度机制**：深度剖析了"AST 沙箱模拟"与"物理进程隔离"两种代码执行方案的差异。
-- **数据中心型 Agent**：LlamaIndex 的 `Document → Index → QueryEngine → Agent` 全链路实践，与 LangGraph Self-RAG 对比。
-- **SOP 驱动协作**：MetaGPT 风格的 Action-driven + Pub/Sub 角色协作，理解结构化产物链如何降低多 Agent 幻觉。
-- **自主任务循环**：BabyAGI 风格的目标驱动任务队列，原生 `while` 循环 vs LangGraph 状态图两种实现。
+本仓库不只是代码的堆砌，它沉淀了一套 **Agent 架构师的决策逻辑**：
 
-## 🏗️ 核心架构可视化：Self-RAG (阶段 05)
+*   **全栈范式**：从手写 ReAct 到使用 LlamaIndex/LangGraph 构建复杂工作流。
+*   **多框架实验室**：深度对比 **LangGraph**, **smolagents**, **CrewAI**, **AutoGen**, **MetaGPT**。
+*   **工程化深度**：覆盖代码执行安全（AST）、多 Agent 协作约束（SOP）、量化评估（RAGAS）与生产级护栏（Guardrails）。
+*   **前沿模式**：复现了 Voyager 的**技能库（Skill Library）**思想与 BabyAGI 的**自主任务循环**。
 
-本项目最核心的生产级范式实现是一个具备"反思与补救"能力的 Self-RAG 系统。
+---
+
+## 🗺️ AI Agent 开发者路线图 (1-15 阶段)
+
+本项目由浅入深分为四大版块，所有阶段均已完成并配有可运行代码。
+
+### 1. 核心原理与基础编排 (Foundation)
+| 阶段 | 模块 | 核心内容 | 实战入口 |
+| :--- | :--- | :--- | :--- |
+| **01-02** | **原子组件** | 工具调用、Prompt 模板、短期/长效记忆 | [01-concepts](./01-core-concepts/) / [02-assistant](./02-research-agent/) |
+| **03-04** | **流程编排** | LangGraph 状态机、ReAct 规划、多 Agent 主管模式 | [03-langgraph](./03-langgraph-agent/) / [04-multi-agent](./04-multi-agent/) |
+| **05** | **生产级闭环** | **Self-RAG 系统**：具备自愈、自评、自检索能力 | [**05-final-project**](./05-final-project/) |
+
+### 2. 多框架深度对比实验室 (Framework Lab)
+| 阶段 | 框架 | 性格与适用场景 | 核心机制 |
+| :--- | :--- | :--- | :--- |
+| **06** | **smolagents** | 代码即操作：极致简洁的工具调用 | [AST 代码智能体](./06-smolagents-intro/) |
+| **07** | **CrewAI** | 职场角色扮演：基于 Backstory 的团队协作 | [任务流编排](./07-crewai-intro/) |
+| **08** | **AutoGen** | 对话式自愈：Agent 之间的动态博弈与报错修正 | [多 Agent 会话](./08-autogen-intro/) |
+| **09** | **执行安全** | 深度辨析 AST 解析与 Subprocess 执行的安全性 | [执行深度挖掘](./09-execution-depth/) |
+
+### 3. 高级进阶模式 (Advanced Patterns)
+| 阶段 | 模式 | 解决的核心问题 | 实战入口 |
+| :--- | :--- | :--- | :--- |
+| **10** | **数据中心型** | LlamaIndex 赋能的 Agentic RAG 与企业知识库 | [LlamaIndex](./10-llamaindex-agent/) |
+| **11** | **SOP 驱动型** | MetaGPT：用软件工程 SOP 约束多 Agent 产出 | [MetaGPT/SOP](./11-metagpt-sop/) |
+| **12** | **自主循环型** | BabyAGI：目标驱动的任务队列与动态优先级 | [自主任务流](./12-autonomous-agents/) |
+| **13** | **技能学习型** | Voyager 风格：将成功经验沉淀为可复用技能库 | [技能库 Agent](./13-skill-library-agent/) |
+
+### 4. 生产化治理与平台 (Engineering & Platform)
+| 阶段 | 主题 | 核心工具与方法 | 实战入口 |
+| :--- | :--- | :--- | :--- |
+| **14** | **低代码平台** | Dify / Coze：从硬核开发到可视化编排的取舍 | [平台对比分析](./14-lowcode-agent-platforms/) |
+| **15** | **生产级工程** | RAGAS 评估、Langfuse 追踪、安全护栏 (Guardrails) | [工程实战代码](./15-production-agent-engineering/) |
+
+---
+
+## 🏗️ 典型架构方案展示
+
+### 方案 A：Self-RAG (自愈型检索增强)
+适用于对回答准确度有极高要求的知识库场景。
 
 <img src="./assets/Self-RAG.png" width="400px">
 
-<details>
-<summary>点击查看 Mermaid 架构源代码 (可复制用于修改)</summary>
+### 方案 B：SOP 驱动的多 Agent 协作
+适用于软件开发、内容生产等具有标准作业程序的复杂流程。
 
 ```mermaid
-graph TD
-    Start((开始)) --> Retrieve[本地检索节点]
-    Retrieve --> Grade[文档评分/质量过滤]
-    
-    Grade --> Check{资料够吗?}
-    
-    Check -- 不够/低质 --> WebSearch[Web Search 补救]
-    Check -- 充足优质 --> Generate[内容生成节点]
-    
-    WebSearch --> Generate
-    Generate --> End((结束))
-    
-    style Start fill:#f9f,stroke:#333,stroke-width:2px
-    style End fill:#f9f,stroke:#333,stroke-width:2px
-    style WebSearch fill:#fff4dd,stroke:#d4a017,stroke-width:2px
+graph LR
+    User --> PM[产品经理]
+    PM -- PRD --> Engineer[工程师]
+    Engineer -- Code --> Reviewer[评审员]
+    Reviewer -- Report --> Engineer
 ```
-</details>
 
 ---
 
-## 🛠️ 环境准备
+## 🛠️ 快速开始
 
+### 1. 基础环境
 ```bash
-# 克隆项目后
 python3 -m venv venv
 source venv/bin/activate
 
-# 推荐：按当前学习阶段安装轻量依赖
+# 推荐：按需安装阶段依赖（以阶段 05 为例）
 pip install -r requirements/base.txt
-
-# 示例：只学习阶段 10 LlamaIndex 时
-pip install -r requirements/phase10-llamaindex.txt
-
-# 如需一次性安装所有阶段依赖，再使用全量入口
-# pip install -r requirements.txt
+# pip install -r requirements/phase05-rag.txt
 ```
 
-> 注意：`requirements.txt` 是全量聚合入口，会安装 CrewAI、AutoGen、sentence-transformers、LlamaIndex 等多个生态的依赖，解析和下载时间较长。日常学习建议优先使用 `requirements/` 下的分阶段依赖文件。
+### 2. ⚠️ 特殊阶段说明 (MetaGPT)
+**阶段 11 (MetaGPT)** 由于依赖冲突，必须使用独立的 Python 3.11 环境。
+具体配置请参考：[11-metagpt-sop/README.md](./11-metagpt-sop/README.md)。
 
-> ⚠️ **MetaGPT 独立环境**：MetaGPT 0.8.x 因版本锁定与其他阶段存在依赖冲突，需使用 Python 3.11 创建独立虚拟环境。详见 [11-metagpt-sop/README.md](./11-metagpt-sop/README.md)。
-
-**环境变量配置**：
-请在 `.env` 文件中配置以下内容（参考 `.env.example`）：
-- `OPENAI_API_KEY` / `OPENAI_BASE_URL`: 大模型接口
-- `MODEL_NAME`: 模型名称（默认 `deepseek-chat`）
-- `TAVILY_API_KEY`: 搜索工具
-- `LANGFUSE_SECRET_KEY / PUBLIC_KEY`: 可观测性分析（可选）
-
----
-
-## 🗺️ 学习路线与目录索引
-
-### 第一阶段：从核心概念到生产级实战
-
-| 阶段 | 模块 | 内容要点 | 状态 |
-| :--- | :--- | :--- | :---: |
-| **01** | [核心概念](./01-core-concepts/) | Tool, Prompt, Memory 的最小 Demo | ✅ |
-| **02** | [研究助手](./02-research-agent/) | 能查资料、写文件、有记忆的研究助手 | ✅ |
-| **03** | [LangGraph 基础](./03-langgraph-agent/) | ReAct 规划、状态机节点与边 | ✅ |
-| **04** | [多 Agent 协作](./04-multi-agent/) | Supervisor 模式与任务分发 | ✅ |
-| **05** | [**生产级项目实战**](./05-final-project/) | **重点**：Self-RAG 闭环、Pydantic 状态管理、Langfuse 追踪 | ✅ |
-| **06** | [smolagents](./06-smolagents-intro/) | **代码即操作**：AST 级别安全的代码执行智能体 | ✅ |
-| **07** | [CrewAI](./07-crewai-intro/) | **职场角色扮演**：基于 Backstory 与任务流水线的团队协作 | ✅ |
-| **08** | [AutoGen](./08-autogen-intro/) | **对话式自愈**：Agent 之间的聊天、自动运行代码与报错修正 | ✅ |
-| **09** | [**执行机制深度挖掘**](./09-execution-depth/) | 深度辨析 AST 解析与 Subprocess 执行的安全性与差异 | ✅ |
-
-### 第二阶段：从框架分类到模式体系
-
-第一阶段解决的是"如何构建一个能调用工具、管理状态、协作执行任务的 Agent"。第二阶段继续研究更完整的 Agent 模式体系：
-
-| 阶段 | 方向 | 学习重点 | 状态 |
-| :--- | :--- | :--- | :---: |
-| **10** | [LlamaIndex 数据中心型 Agent](./10-llamaindex-agent/) | 数据索引、Query Engine、Agentic RAG、企业知识库 | ✅ |
-| **11** | [MetaGPT / SOP 多 Agent](./11-metagpt-sop/) | 软件工程 SOP、结构化中间产物、角色协作约束 | ✅ |
-| **12** | [自主任务循环 Agent](./12-autonomous-agents/) | AutoGPT / BabyAGI 风格的任务队列、反思、停止条件 | ✅ |
-| **13** | [技能库与长期学习](./13-skill-library-agent/) | Voyager 风格技能沉淀、检索复用、版本管理 | ✅ |
-| **14** | [低代码 Agent 平台](./14-lowcode-agent-platforms/) | Dify / Coze 的工作流、知识库、插件和发布能力 | ✅ |
-| **15** | [生产级 Agent 工程](./15-production-agent-engineering/) | 评估、观测、安全、权限、失败恢复、人类介入 | ✅ |
-
-> ✅ 全部 15 个阶段已完成
-
-完整路线见：[**Agent 第二阶段学习路线图**](./docs/plan2.md)。
+### 3. 配置环境变量
+复制 `.env.example` 为 `.env` 并填入：
+- `OPENAI_API_KEY` / `OPENAI_BASE_URL`
+- `MODEL_NAME` (推荐 `deepseek-chat`)
+- `TAVILY_API_KEY` (搜索功能必需)
 
 ---
 
-## 📖 核心总结与图谱
+## 📖 核心资产与路线图
 
-- [**AGENTS_KNOWLEDGE_MAP.md**](./AGENTS_KNOWLEDGE_MAP.md)：本项目最终沉淀的 **Agent 开发全景知识图谱**，涵盖了四大框架的性格对比及选择建议。
-- [**docs/plan2.md**](./docs/plan2.md)：第二阶段学习路线图，围绕 Agent 框架分类、模式体系和后续阶段规划展开。
+- [**AGENTS_KNOWLEDGE_MAP.md**](./AGENTS_KNOWLEDGE_MAP.md)：四类 Agent 框架性格对比及选择建议。
+- [**docs/plan2.md**](./docs/plan2.md)：本项目背后的设计心路历程与架构演进图谱。
 
 ---
 
-## 🚀 开发者箴言
-
-> 所有的探索都是为了在面对真实业务需求时，不仅知道"怎么做"，更知道"为什么这么做"以及"有没有更好的替代方案"。
+## 🚀 结语
+> 所有的探索都是为了在面对真实业务需求时，不仅知道“怎么做”，更知道“为什么这么做”以及“有没有更好的替代方案”。
 
 **祝您的智能体永不报错！✨👋**
