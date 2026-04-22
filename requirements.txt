@@ -5,6 +5,9 @@
 #
 # This aggregate file is intentionally broad and may install many heavy
 # transitive dependencies.
+#
+# NOTE: MetaGPT (phase 11) requires a dedicated Python 3.11 venv due to
+#       dependency conflicts. See 11-metagpt-sop/README.md for setup.
 
 -r requirements/base.txt
 -r requirements/phase05-rag.txt
