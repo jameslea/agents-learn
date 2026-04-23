@@ -48,6 +48,12 @@
 | **14** | **低代码平台** | Dify / Coze：从硬核开发到可视化编排的取舍 | [平台对比分析](./14-lowcode-agent-platforms/) |
 | **15** | **生产级工程** | RAGAS 评估、Langfuse 追踪、安全护栏 (Guardrails) | [工程实战代码](./15-production-agent-engineering/) |
 
+### 5. 💎 生产环境生存指南 (Architecture Deep Dives)
+> **强烈推荐中高级开发者阅读**：本部分脱离了基础的 API 调用，专注于大模型底层原理、深度数据清洗（ETL）、分布式状态机架构（Checkpoint）以及安全评估。
+| 主题 | 核心内容 | 深度指南入口 |
+| :--- | :--- | :--- |
+| **高阶架构** | vLLM/量化选型、GraphRAG、断点续传、Prompt 注入防御 | [👉 进入进阶全景图](./architecture-deep-dives/README.md) |
+
 ---
 
 ## 🏗️ 典型架构方案展示

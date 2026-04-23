@@ -58,3 +58,6 @@ logs/
 chroma_db/
 **/chroma_db/
 **/workspace/
+
+# Explorations (本地探索与研究，不纳入版本管理)
+explorations/
