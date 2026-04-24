@@ -1,0 +1,4 @@
+# 第二章：深度数据工程实战依赖
+sentence-transformers
+faiss-cpu
+ollama
