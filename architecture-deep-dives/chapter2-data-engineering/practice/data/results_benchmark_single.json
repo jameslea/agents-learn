@@ -1,0 +1,119 @@
+{
+  "test_set": "single",
+  "results": [
+    {
+      "query": "苹果最近发布的手机有什么特点？",
+      "expected_ids": [
+        "A1"
+      ],
+      "difficulty": "low",
+      "Baseline_hit": false,
+      "Baseline_rank": "N/A",
+      "Baseline_latency": 0.0199129581451416,
+      "Rerank_hit": false,
+      "Rerank_rank": "N/A",
+      "Rerank_latency": 3.2311501502990723,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 3.1781091690063477,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 4.984572172164917
+    },
+    {
+      "query": "苹果生病了该怎么治？",
+      "expected_ids": [
+        "A3"
+      ],
+      "difficulty": "high",
+      "Baseline_hit": true,
+      "Baseline_rank": 3,
+      "Baseline_latency": 0.018724918365478516,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.7484021186828613,
+      "HyDE_hit": true,
+      "HyDE_rank": 3,
+      "HyDE_latency": 2.295984983444214,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 2.757322072982788
+    },
+    {
+      "query": "自身免疫系统攻击导致的血糖问题是怎么回事？",
+      "expected_ids": [
+        "B1"
+      ],
+      "difficulty": "high",
+      "Baseline_hit": true,
+      "Baseline_rank": 3,
+      "Baseline_latency": 0.012476921081542969,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.771484136581421,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 2.8002328872680664,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 3.789454936981201
+    },
+    {
+      "query": "我想去美国首都旅游，该去哪里？",
+      "expected_ids": [
+        "D1"
+      ],
+      "difficulty": "medium",
+      "Baseline_hit": true,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.01928234100341797,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.7883591651916504,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 2.306396961212158,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 3.418872117996216
+    },
+    {
+      "query": "这个编程语言的名字在法律里有什么特殊含义吗？",
+      "expected_ids": [
+        "C2"
+      ],
+      "difficulty": "high",
+      "Baseline_hit": true,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.013985157012939453,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.746047019958496,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 2.7565701007843018,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 3.322540044784546
+    },
+    {
+      "query": "写一段关于苹果掉下来发现引力的故事。",
+      "expected_ids": [
+        "A4"
+      ],
+      "difficulty": "medium",
+      "Baseline_hit": true,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.015449047088623047,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 6.445674896240234,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 21.96440815925598,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 8.367640972137451
+    }
+  ]
+}
