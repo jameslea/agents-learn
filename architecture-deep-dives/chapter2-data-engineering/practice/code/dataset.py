@@ -101,5 +101,72 @@ TEST_QUERIES = [
     }
 ]
 
+# ── 多跳推理测试用例（需要跨文档连接信息才能回答） ──
+# 与 TEST_QUERIES 不同，每条查询期望命中多个文档的联合信息。
+MULTI_HOP_QUERIES = [
+    # ── 跨 Apple 系列 ──
+    {
+        "query": "从苹果公司推出AI手机到牛顿发现引力，'苹果'这个符号在历史上经历了怎样的演变？",
+        "expected_ids": ["A1", "A4"],
+        "difficulty": "multi-hop",
+        "reason": "需要连接科技产品和科学史两个时代的文档"
+    },
+    {
+        "query": "苹果树的病害和苹果派的做法有什么联系和区别？",
+        "expected_ids": ["A3", "A2"],
+        "difficulty": "multi-hop",
+        "reason": "需要从农业病害和烹饪美食两个角度对比同一事物"
+    },
+
+    # ── 糖尿病系列 ──
+    {
+        "query": "1型糖尿病和2型糖尿病在病因上有什么本质区别？为什么治疗方案不同？",
+        "expected_ids": ["B1", "B2"],
+        "difficulty": "multi-hop",
+        "reason": "需要对比两篇医学文档的病理机制并推导治疗逻辑"
+    },
+    {
+        "query": "自身免疫攻击和胰岛素抵抗分别对应哪种糖尿病？",
+        "expected_ids": ["B1", "B2"],
+        "difficulty": "multi-hop",
+        "reason": "需要将症状描述反向映射到正确的疾病类型"
+    },
+
+    # ── Python 系列 ──
+    {
+        "query": "Python 在编程语言和法律术语中分别代表什么？两种含义差别很大，请分别说明。",
+        "expected_ids": ["C1", "C2"],
+        "difficulty": "multi-hop",
+        "reason": "同一词汇在技术和法律领域的语义对比"
+    },
+
+    # ── 华盛顿系列 ──
+    {
+        "query": "美国有两个华盛顿，它们的地理位置和政治身份有什么不同？",
+        "expected_ids": ["D1", "D2"],
+        "difficulty": "multi-hop",
+        "reason": "需要区分华盛顿特区和华盛顿州两个实体"
+    },
+
+    # ── 跨类别综合 ──
+    {
+        "query": "苹果树的病害和iPhone新品的发布，这两个话题中的'苹果'分别指什么？",
+        "expected_ids": ["A3", "A1"],
+        "difficulty": "multi-hop",
+        "reason": "跨语义范畴对比：农业病害 vs 科技产品"
+    },
+    {
+        "query": "糖尿病的两种主要类型在发病机制和对胰岛素的依赖程度上有何不同？",
+        "expected_ids": ["B1", "B2"],
+        "difficulty": "multi-hop",
+        "reason": "需要全面对比两篇糖尿病文档的病理和治疗特征"
+    },
+]
+
+ALL_QUERIES = TEST_QUERIES + [
+    {**q, "expected_id": q["expected_ids"][0]}  # 兼容旧字段，取第一个作为主期望
+    for q in MULTI_HOP_QUERIES
+]
+
 if __name__ == "__main__":
-    print(f"Dataset loaded: {len(DOCUMENTS)} documents, {len(TEST_QUERIES)} test queries.")
+    print(f"Dataset loaded: {len(DOCUMENTS)} documents, {len(TEST_QUERIES)} single-hop + {len(MULTI_HOP_QUERIES)} multi-hop = {len(ALL_QUERIES)} total queries.")

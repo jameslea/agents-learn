@@ -67,5 +67,8 @@ chroma_db/
 **/chroma_db/
 **/workspace/
 
+# LightRAG / GraphRAG 测试产生的索引数据
+**/graph_index*/
+
 # Explorations (本地探索与研究，不纳入版本管理)
 explorations/

@@ -1,0 +1,165 @@
+{
+  "test_set": "multi",
+  "results": [
+    {
+      "query": "从苹果公司推出AI手机到牛顿发现引力，'苹果'这个符号在历史上经历了怎样的演变？",
+      "expected_ids": [
+        "A1",
+        "A4"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": false,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.35344576835632324,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 15.447823762893677,
+      "HyDE_hit": false,
+      "HyDE_rank": 1,
+      "HyDE_latency": 6.769442081451416,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 13.36551809310913
+    },
+    {
+      "query": "苹果树的病害和苹果派的做法有什么联系和区别？",
+      "expected_ids": [
+        "A3",
+        "A2"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": false,
+      "Baseline_rank": "N/A",
+      "Baseline_latency": 0.012140035629272461,
+      "Rerank_hit": false,
+      "Rerank_rank": "N/A",
+      "Rerank_latency": 0.013960838317871094,
+      "HyDE_hit": false,
+      "HyDE_rank": 1,
+      "HyDE_latency": 21.8515043258667,
+      "HyDE+Rerank_hit": false,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 11.598084211349487
+    },
+    {
+      "query": "1型糖尿病和2型糖尿病在病因上有什么本质区别？为什么治疗方案不同？",
+      "expected_ids": [
+        "B1",
+        "B2"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": true,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.02712392807006836,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.935654878616333,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 3.365812063217163,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 4.3647990226745605
+    },
+    {
+      "query": "自身免疫攻击和胰岛素抵抗分别对应哪种糖尿病？",
+      "expected_ids": [
+        "B1",
+        "B2"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": false,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.021456241607666016,
+      "Rerank_hit": false,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.789947986602783,
+      "HyDE_hit": false,
+      "HyDE_rank": 1,
+      "HyDE_latency": 3.0071628093719482,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 3.997105836868286
+    },
+    {
+      "query": "Python 在编程语言和法律术语中分别代表什么？两种含义差别很大，请分别说明。",
+      "expected_ids": [
+        "C1",
+        "C2"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": true,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.02540111541748047,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.739758014678955,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 3.15075421333313,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 4.913062810897827
+    },
+    {
+      "query": "美国有两个华盛顿，它们的地理位置和政治身份有什么不同？",
+      "expected_ids": [
+        "D1",
+        "D2"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": false,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.024563074111938477,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.8261051177978516,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 2.594604015350342,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 3.6795198917388916
+    },
+    {
+      "query": "苹果树的病害和iPhone新品的发布，这两个话题中的'苹果'分别指什么？",
+      "expected_ids": [
+        "A3",
+        "A1"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": true,
+      "Baseline_rank": 1,
+      "Baseline_latency": 0.018903255462646484,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.9724462032318115,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 2.254300832748413,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 3.3696367740631104
+    },
+    {
+      "query": "糖尿病的两种主要类型在发病机制和对胰岛素的依赖程度上有何不同？",
+      "expected_ids": [
+        "B1",
+        "B2"
+      ],
+      "difficulty": "multi-hop",
+      "Baseline_hit": false,
+      "Baseline_rank": 2,
+      "Baseline_latency": 0.023984909057617188,
+      "Rerank_hit": true,
+      "Rerank_rank": 1,
+      "Rerank_latency": 2.6392250061035156,
+      "HyDE_hit": true,
+      "HyDE_rank": 1,
+      "HyDE_latency": 3.440380096435547,
+      "HyDE+Rerank_hit": true,
+      "HyDE+Rerank_rank": 1,
+      "HyDE+Rerank_latency": 4.081506967544556
+    }
+  ]
+}

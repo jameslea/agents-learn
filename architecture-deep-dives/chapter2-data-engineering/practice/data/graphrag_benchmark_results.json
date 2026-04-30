@@ -1,0 +1,54 @@
+[
+  {
+    "query": "苹果最近发布的手机有什么特点？",
+    "expected_ids": [
+      "A1"
+    ],
+    "mode": "local",
+    "difficulty": "low",
+    "test_set": "single",
+    "latency_s": 0.4,
+    "hit": null,
+    "judge_raw": "SKIP",
+    "answer_preview": "苹果公司在2024年秋季发布会上推出了新款iPhone 16，该手机搭载了最新的A18芯片，显著提升了AI处理能力。这一芯片是iPhone 16的核心技术亮点，使其在人工智能相关任务上表现更出色，例如图像识别、语音处理和机器学习应用。\n\n此"
+  },
+  {
+    "query": "苹果最近发布的手机有什么特点？",
+    "expected_ids": [
+      "A1"
+    ],
+    "mode": "global",
+    "difficulty": "low",
+    "test_set": "single",
+    "latency_s": 0.1,
+    "hit": null,
+    "judge_raw": "SKIP",
+    "answer_preview": "苹果公司在2024年秋季发布会上推出了新款智能手机iPhone 16，该机型搭载了最新的A18芯片，显著提升了人工智能（AI）处理能力。这一升级使得iPhone 16在运行效率、图像处理和智能功能方面表现更出色，为用户带来更流畅的使用体验。"
+  },
+  {
+    "query": "苹果生病了该怎么治？",
+    "expected_ids": [
+      "A3"
+    ],
+    "mode": "local",
+    "difficulty": "high",
+    "test_set": "single",
+    "latency_s": 0.1,
+    "hit": null,
+    "judge_raw": "SKIP",
+    "answer_preview": "苹果本身是水果，并不会像人类或动物一样患病，因此不存在“苹果生病了”这一说法。不过，如果您的问题是指苹果树生病了，那么可以明确的是，苹果树常见的一种病害是**炭疽病**（也称**癌病**或**canker disease**），这是一种由真"
+  },
+  {
+    "query": "苹果生病了该怎么治？",
+    "expected_ids": [
+      "A3"
+    ],
+    "mode": "global",
+    "difficulty": "high",
+    "test_set": "single",
+    "latency_s": 0.1,
+    "hit": null,
+    "judge_raw": "SKIP",
+    "answer_preview": "苹果本身是水果，不会像人一样生病，但苹果树可能会受到病害影响，比如真菌感染引起的“炭疽病”（也称“腐烂病”或“癌病”）。这种病害会感染苹果树，导致果实表面出现褐色、凹陷的斑点，从而影响果实品质和产量。\n\n目前没有针对苹果“治病”的方法，因为"
+  }
+]
