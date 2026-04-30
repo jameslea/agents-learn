@@ -1,17 +1,41 @@
 import os
 import json
 import time
+import argparse
 import numpy as np
 import faiss
 import requests
 from sentence_transformers import SentenceTransformer
-from dataset import DOCUMENTS, TEST_QUERIES
+from dataset import DOCUMENTS, TEST_QUERIES, MULTI_HOP_QUERIES
 
 # 配置
 EMBED_MODEL_NAME = "text-embedding-nomic-embed-text-v1.5"
 LM_STUDIO_API = "http://localhost:1234/v1"
 LM_STUDIO_CHAT_MODEL = "qwen/qwen3-4b-2507"
 LM_STUDIO_EMBED_MODEL = "text-embedding-nomic-embed-text-v1.5"
+
+# ── 命令行参数 ──
+parser = argparse.ArgumentParser(description="向量检索模式对比评测（Baseline / Rerank / HyDE / HyDE+Rerank）")
+parser.add_argument("--test-set", choices=["single", "multi", "all"], default="single",
+                    help="测试集: single=语义混淆(默认), multi=多跳推理, all=两者")
+parser.add_argument("--max-queries", type=int, default=8,
+                    help="测试查询数（默认 8）")
+parser.add_argument("--output", default="",
+                    help="结果保存路径（默认不保存）")
+parser.add_argument("--quick", action="store_true",
+                    help="快速模式（2 条 query）")
+args = parser.parse_args()
+
+if args.quick:
+    args.max_queries = min(args.max_queries, 2)
+    args.test_set = "single"
+
+if args.test_set == "single":
+    QUERIES = TEST_QUERIES
+elif args.test_set == "multi":
+    QUERIES = MULTI_HOP_QUERIES
+else:
+    QUERIES = TEST_QUERIES + MULTI_HOP_QUERIES
 
 class RAGBenchmark:
     def __init__(self):
@@ -159,51 +183,77 @@ class RAGBenchmark:
         latency = time.time() - start
         return [r[0]["id"] for r in reranked[:3]], latency
 
-def evaluate():
+def evaluate(query_set, test_set_name="single", max_queries=None, output_path=""):
+    """统一评测入口，支持 single-hop 和 multi-hop 测试集"""
+    queries = query_set[:max_queries]
     benchmark = RAGBenchmark()
-    
+
     modes = {
         "Baseline": benchmark.run_baseline,
         "Rerank": benchmark.run_rerank,
         "HyDE": benchmark.run_hyde,
-        "HyDE+Rerank": benchmark.run_hyde_rerank
+        "HyDE+Rerank": benchmark.run_hyde_rerank,
     }
-    
-    results_report = []
-    
-    print("\n" + "="*50)
-    print("开始进行 RAG 模式评测对比")
-    print("="*50)
 
-    for test in TEST_QUERIES:
+    results_report = []
+
+    print("\n" + "=" * 50)
+    print(f"评测: {test_set_name} | {len(queries)} 条查询 × {len(modes)} 种模式")
+    print("=" * 50)
+
+    for test in queries:
         query = test["query"]
-        expected = test["expected_id"]
+        # 兼容 single-hop (expected_id) 和 multi-hop (expected_ids)
+        expected_ids = test.get("expected_ids")
+        if expected_ids is None:
+            expected_ids = [test["expected_id"]]
+        expected_label = ", ".join(expected_ids)
+        is_multi = len(expected_ids) > 1
+
         print(f"\n[测试项] 问题: {query}")
-        print(f"        期望 ID: {expected} ({test['reason']})")
-        
-        row = {"query": query, "expected": expected, "difficulty": test["difficulty"]}
-        
+        print(f"        期望: [{expected_label}] ({test['difficulty']})")
+
+        row = {
+            "query": query,
+            "expected_ids": expected_ids,
+            "difficulty": test["difficulty"],
+        }
+
         for mode_name, mode_func in modes.items():
             top_ids, latency = mode_func(query)
-            hit = expected in top_ids
-            rank = top_ids.index(expected) + 1 if hit else "N/A"
-            
-            print(f"  - [{mode_name:8}] 命中: {'✅' if hit else '❌'} | 排名: {rank} | 耗时: {latency:.4f}s")
+            # multi-hop: 所有期望文档都出现才算命中
+            if is_multi:
+                hit = all(eid in top_ids for eid in expected_ids)
+            else:
+                hit = expected_ids[0] in top_ids
+
+            rank = next((i + 1 for i, eid in enumerate(top_ids) if eid in expected_ids), "N/A")
+
+            status = "✓" if hit else "✗"
+            print(f"  - [{mode_name:8}] 命中: {status} | 排名: {rank} | 耗时: {latency:.4f}s")
+
             row[f"{mode_name}_hit"] = hit
             row[f"{mode_name}_rank"] = rank
             row[f"{mode_name}_latency"] = latency
-            
+
         results_report.append(row)
 
-    # 汇总数据
-    print("\n" + "="*50)
-    print("评测汇总")
-    print("="*50)
+    # 汇总
+    print("\n" + "=" * 50)
+    print(f"评测汇总 — {test_set_name}")
+    print("=" * 50)
     for mode in modes.keys():
         hits = sum(1 for r in results_report if r[f"{mode}_hit"])
         total = len(results_report)
         avg_latency = sum(r[f"{mode}_latency"] for r in results_report) / total
-        print(f"模式: {mode:8} | 命中率: {hits}/{total} ({hits/total*100:.1f}%) | 平均耗时: {avg_latency:.4f}s")
+        print(f"模式: {mode:8} | 命中率: {hits}/{total} ({hits / total * 100:.1f}%) | 平均耗时: {avg_latency:.4f}s")
+
+    # 保存结果
+    if output_path:
+        with open(output_path, "w") as f:
+            json.dump({"test_set": test_set_name, "results": results_report}, f, ensure_ascii=False, indent=2)
+        print(f"  结果已保存: {output_path}")
+
 
 if __name__ == "__main__":
-    evaluate()
+    evaluate(query_set=QUERIES, test_set_name=args.test_set, max_queries=args.max_queries, output_path=args.output)
