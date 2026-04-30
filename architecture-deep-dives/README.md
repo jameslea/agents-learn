@@ -24,12 +24,12 @@
 *   📄 [03-graphrag-limits.md](./chapter2-data-engineering/03-graphrag-limits.md) - **图谱增强**：拆解 GraphRAG（微软架构），解决传统 RAG 无法完成的“跨文档全局逻辑推理”难题。
 
 ### ⚙️ Chapter 3: 分布式 Agent 架构与底层工程 (Systems & Infra)
-*让 Agent 在网络闪断和复杂逻辑流转中坚不可摧。*
-*   📄 [01-checkpoint-and-actor-model.md](./chapter3-distributed-system/01-checkpoint-and-actor-model.md) - **架构护航**：抛弃 Web 同步思维引入消息队列；详解 LangGraph 的断点续传机制、Temporal 持久化执行与 Actor 并发防死锁方案。
+*让 Agent 在网络闪断和复杂逻辑流转中稳定运行。*
+*   📄 [01-checkpoint-and-actor-model.md](./chapter3-distributed-system/01-checkpoint-and-actor-model.md) - **架构护航**：异步解耦与消息队列选型、LangGraph/Temporal Checkpoint 断点续传、多 Agent 协调四种模式对比（编排器/黑板/Actor/消息总线），以及副作用重放和确定性约束等核心陷阱。
 
 ### 🛡️ Chapter 4: 评估体系与全链路安全防御 (Evaluation & Security)
 *上线生产环境前的最后两道生死门槛。*
-*   📄 [01-llm-judge-and-guardrails.md](./chapter4-evaluation-security/01-llm-judge-and-guardrails.md) - **测评与防线**：使用 LLM-as-a-Judge 自动化量化测试指标（忠实度、工具成功率），并构建防御 Prompt Injection 攻击的三重物理/逻辑护栏。
+*   📄 [01-llm-judge-and-guardrails.md](./chapter4-evaluation-security/01-llm-judge-and-guardrails.md) - **测评与防线**：使用 LLM-as-a-Judge 自动化量化测试指标（忠实度、工具成功率）；Prompt Injection 攻击手法演进与最小权限原则，以及多层防御护栏。
 
 ---
 *版权所有：本项目内容系真实业务沉淀，欢迎 Star 与探讨！*
