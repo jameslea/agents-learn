@@ -1,9 +1,16 @@
 import asyncio
 import os
+import sys
+from pathlib import Path
 from typing import List, Dict
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # 1. 配置加载
 load_dotenv()
@@ -11,15 +18,15 @@ load_dotenv()
 # 2. 模拟软件团队的角色定义
 class SOPTeam:
     def __init__(self):
-        model_name = os.getenv("MODEL_NAME", "deepseek-chat")
+        model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
         api_key = os.getenv("OPENAI_API_KEY")
         api_base = os.getenv("OPENAI_BASE_URL")
         
-        self.llm = ChatOpenAI(
-            model=model_name,
+        self.llm = build_llm(
+            model_name=model_name,
             openai_api_key=api_key,
             openai_api_base=api_base,
-            temperature=0.1
+            temperature=0.1,
         )
 
     async def product_manager_action(self, requirement: str) -> str:

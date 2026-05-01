@@ -1,19 +1,26 @@
 import os
+import sys
 import logging
 from enum import Enum
+from pathlib import Path
 from typing import List, TypedDict
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 # Langchain & Langgraph components
-from langchain_openai import ChatOpenAI
 from langchain_core.embeddings import FakeEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.graph import StateGraph, END
 from langfuse.langchain import CallbackHandler
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # 配置日志
 logging.basicConfig(
@@ -54,10 +61,10 @@ langfuse_handler = CallbackHandler()
 # ==========================================
 # 0. 准备基础设施 (模型与向量库)
 # ==========================================
-model_name = os.getenv("MODEL_NAME", "deepseek-chat")
+model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
 
-# 大脑
-llm = ChatOpenAI(model=model_name, temperature=0)
+# 大脑：统一从工厂函数构建，兼容 DeepSeek V4 thinking 配置
+llm = build_llm(model_name=model_name, temperature=0)
 
 # 搜索引擎工具 (Tavily)
 web_search_tool = TavilySearchResults(max_results=3)

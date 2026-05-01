@@ -1,14 +1,21 @@
 import os
 import json
 import operator
+import sys
+from pathlib import Path
 from typing import List, Dict, TypedDict, Annotated
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langgraph.graph import StateGraph, END
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # --- 1. 数据模型与状态定义 ---
 class Task(BaseModel):
@@ -30,15 +37,15 @@ class AgentState(TypedDict):
 
 # --- 2. 节点与边逻辑 ---
 load_dotenv()
-model_name = os.getenv("MODEL_NAME", "deepseek-chat")
+model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
 api_key = os.getenv("OPENAI_API_KEY")
 api_base = os.getenv("OPENAI_BASE_URL")
 
-llm = ChatOpenAI(
-    model=model_name,
+llm = build_llm(
+    model_name=model_name,
     openai_api_key=api_key,
     openai_api_base=api_base,
-    temperature=0.2
+    temperature=0.2,
 )
 
 def init_tasks_node(state: AgentState) -> dict:

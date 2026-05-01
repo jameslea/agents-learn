@@ -1,12 +1,19 @@
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
 # 确保在项目中创建了 .env 文件，并写入了 OPENAI_API_KEY=你的密钥
 load_dotenv() 
 
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # 1. 定义一个简单的工具 (Tool)
 # Agent 推理时，如果发现自己无法回答，会尝试调用带有明确描述的工具。
@@ -21,9 +28,9 @@ def get_weather(location: str) -> str:
     return "未知天气"
 
 # 2. 也是 Agent 的大脑 (LLM / Planning)
-# 如果你配置了 DeepSeek，需要确保使用的是 DeepSeek 支持的模型名 (深浅色通常为 deepseek-chat)
-model_name = os.getenv("MODEL_NAME", "deepseek-chat") # 默认换成 deepseek，如果你用 openai 可以改回 gpt-4o-mini
-llm = ChatOpenAI(model=model_name, temperature=0)
+# 如果你配置了 DeepSeek，推荐使用 deepseek-v4-flash，并通过 DEEPSEEK_THINKING 控制思考模式
+model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
+llm = build_llm(model_name=model_name, temperature=0)
 
 # 工具列表
 tools = [get_weather]

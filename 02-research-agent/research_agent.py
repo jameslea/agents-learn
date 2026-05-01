@@ -1,15 +1,22 @@
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
+
 # 初始化大模型 (根据外层环境变量自动适配 OpenAI 或 DeepSeek)
-model_name = os.getenv("MODEL_NAME", "deepseek-chat")
-llm = ChatOpenAI(model=model_name, temperature=0.2)
+model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
+llm = build_llm(model_name=model_name, temperature=0.2)
 
 # ==========================================
 # 1. 准备工具箱 (Tools)

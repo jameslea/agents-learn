@@ -1,17 +1,24 @@
 import os
+import sys
 import operator
 import logging
 from enum import Enum
+from pathlib import Path
 from typing import Annotated, List, TypedDict
 
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.tools.wikipedia.tool import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 from langchain.agents import create_agent         # ✅ 使用 LangChain v1 推荐的 create_agent
 from langgraph.graph import StateGraph, END
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # ==========================================
 # 0. 配置日志
@@ -53,7 +60,10 @@ wikipedia_tool = WikipediaQueryRun(api_wrapper=api_wrapper)
 # 2. 初始化大模型
 # ==========================================
 
-llm = ChatOpenAI(model=os.getenv("MODEL_NAME", "deepseek-chat"), temperature=0)
+llm = build_llm(
+    model_name=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
+    temperature=0,
+)
 
 # ==========================================
 # 3. 定义各角色 Agent

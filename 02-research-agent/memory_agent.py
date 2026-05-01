@@ -1,18 +1,25 @@
 import os
+import sys
 import uuid
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 # 引入 LangGraph 最核心的内存检查点机制
 from langgraph.checkpoint.memory import MemorySaver
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
+
 # 1. 准备基础模型
-model_name = os.getenv("MODEL_NAME", "deepseek-chat")
-llm = ChatOpenAI(model=model_name, temperature=0.7)
+model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
+llm = build_llm(model_name=model_name, temperature=0.7)
 
 # 准备一个简单的工具，演示附带上下文时的调用
 @tool

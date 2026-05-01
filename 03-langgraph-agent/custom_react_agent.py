@@ -1,8 +1,10 @@
 import os
+import sys
 import time
 import logging
 import operator
 from enum import Enum
+from pathlib import Path
 from typing import Annotated, TypedDict
 
 from dotenv import load_dotenv
@@ -19,11 +21,16 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # ==========================================
 # 0.5 架构防腐层：消除魔法字符串的核心常量池
@@ -51,10 +58,10 @@ def get_current_weather(location: str) -> str:
     return f"{location} 今天气温突降，温度是 8°C"
 
 tools = [get_current_weather]
-model_name = os.getenv("MODEL_NAME", "deepseek-chat")
+model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
 
 # 【重点】我们剥离了造好的大礼包，必须手动给大模型挂上兵器库声明
-llm = ChatOpenAI(model=model_name, temperature=0).bind_tools(tools)
+llm = build_llm(model_name=model_name, temperature=0).bind_tools(tools)
 
 # 3. 定义三大核心车间与调度枢纽（Nodes 与 Conditional Edge）
 

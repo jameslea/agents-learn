@@ -1,11 +1,18 @@
 import asyncio
 import json
 import os
+import sys
+from pathlib import Path
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from common.llm_factory import build_llm
 
 # 1. 技能模型定义
 class Skill(BaseModel):
@@ -20,11 +27,8 @@ class SkillLibraryAgent:
         self.library_path = library_path
         self.skills: Dict[str, Skill] = self._load_library()
         
-        model_name = os.getenv("MODEL_NAME", "deepseek-chat")
-        self.llm = ChatOpenAI(
-            model=model_name,
-            temperature=0.1
-        )
+        model_name = os.getenv("MODEL_NAME", "deepseek-v4-flash")
+        self.llm = build_llm(model_name=model_name, temperature=0.1)
 
     def _load_library(self) -> Dict[str, Skill]:
         if not os.path.exists(self.library_path):
