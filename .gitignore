@@ -72,3 +72,5 @@ chroma_db/
 
 # Explorations (本地探索与研究，不纳入版本管理)
 explorations/
+
+.deepseek/
