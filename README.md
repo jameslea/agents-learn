@@ -105,6 +105,8 @@ pip install -r requirements/base.txt
 
 - [**AGENTS_KNOWLEDGE_MAP.md**](./AGENTS_KNOWLEDGE_MAP.md)：四类 Agent 框架性格对比及选择建议。
 - [**docs/plan2.md**](./docs/plan2.md)：本项目背后的设计心路历程与架构演进图谱。
+- [**docs/from-learning-to-production.md**](./docs/from-learning-to-production.md)：从学习到实战的落地行动框架——场景选型、五道坎、分阶段推进。
+- [**docs/practice-projects-plan.md**](./docs/practice-projects-plan.md)：五场景实战项目矩阵——35 个坑位驱动的全覆盖练兵计划。
 
 ---
 
