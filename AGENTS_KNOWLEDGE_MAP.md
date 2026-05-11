@@ -128,6 +128,13 @@
 ### 3. 横向扩展到多模态 Agent
 视觉理解、语音交互、操作浏览器/桌面应用——这是 Agent 的下一个前沿，也是本项目尚未覆盖的方向。可以关注：GPT-4o 的多模态能力、Playwright/Selenium 浏览器自动化、Whisper 语音交互与 Agent 的融合。
 
+### 📌 核心概念与知识深潜 (Core Concepts)
+
+为了深入理解智能体背后的原理，建议阅读以下知识性文档：
+
+1. **[Reranker 深度架构与选型](./docs/concepts/reranker-deep-dive.md)** — 解决 RAG 中的语义混淆问题。
+2. **[LLM 运行时与工程化](./docs/concepts/model-runtime-and-engineering.md)** — 理解模型加载、显存管理与推理加速。
+
 ### 📌 实战行动指南
 
 以上方向已经有了具体的落地文档，建议按顺序阅读：

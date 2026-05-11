@@ -20,6 +20,7 @@ from llama_index.core import VectorStoreIndex, StorageContext, Settings
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai_like import OpenAILike
+from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
 from dotenv import load_dotenv
 
 # 计算导入耗时
@@ -48,6 +49,12 @@ def setup_settings():
     配置全局模型设置。
     检索时必须使用与索引构建时相同的 Embedding 模型，否则无法正确计算相似度。
     """
+    # 避免重复初始化
+    if Settings.callback_manager and Settings.callback_manager.handlers:
+        for handler in Settings.callback_manager.handlers:
+            if isinstance(handler, LlamaDebugHandler):
+                return handler
+
     Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-zh-v1.5")
     Settings.llm = OpenAILike(
         model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
@@ -55,6 +62,11 @@ def setup_settings():
         api_base=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
         is_chat_model=True
     )
+    
+    # 添加可观测性组件：用于记录各环节耗时
+    llama_debug = LlamaDebugHandler(print_trace_on_end=False)
+    Settings.callback_manager = CallbackManager([llama_debug])
+    return llama_debug
 
 from reranker import get_reranker
 
@@ -73,12 +85,12 @@ def get_query_engine():
     index = VectorStoreIndex.from_vector_store(vector_store)
     
     # 3. 创建查询引擎
-    # 粗排：similarity_top_k=5，先从库里捞出 5 个最像的
-    # 精排：使用 reranker 对这 5 个结果进行二次打分，保留最相关的 2 个给 LLM
+    # 粗排：similarity_top_k=10，先从库里捞出 10 个最像的
+    # 精排：使用 reranker 对这 10 个结果进行二次打分，保留最相关的 2 个给 LLM
     reranker = get_reranker(top_n=2)
     
     query_engine = index.as_query_engine(
-        similarity_top_k=5,
+        similarity_top_k=10,
         node_postprocessors=[reranker]
     )
     return query_engine
@@ -86,10 +98,44 @@ def get_query_engine():
 if __name__ == "__main__":
     # 脚本入口：执行一次测试查询
     logger.info("=== 查询引擎单次测试启动 ===")
-    engine = get_query_engine()
-    query_text = "Project X 的核心指标是什么？"
-    response = engine.query(query_text)
     
+    # 1. 设置全局配置并获取调试处理器
+    # 注意：setup_settings 会被 get_query_engine 调用，这里我们手动调用一次以获取处理器
+    from llama_index.core.callbacks import CBEventType
+    llama_debug = setup_settings()
+    
+    # 2. 初始化引擎
+    engine = get_query_engine()
+    
+    query_text = "Project X 的核心指标是什么？"
+    
+    # 3. 执行查询
+    start_time = time.time()
+    response = engine.query(query_text)
+    total_duration = time.time() - start_time
+    
+    # 4. 提取各环节耗时 (从调试处理器中获取)
+    # get_event_time_info 返回的是 EventStats 对象
+    retrieval_stats = llama_debug.get_event_time_info(CBEventType.RETRIEVE)
+    retrieval_time = retrieval_stats.total_secs if hasattr(retrieval_stats, 'total_secs') else 0
+    
+    # 获取重排事件耗时 (Cross-Encoder)
+    rerank_stats = llama_debug.get_event_time_info(CBEventType.RERANKING)
+    rerank_time = rerank_stats.total_secs if hasattr(rerank_stats, 'total_secs') else 0
+    
+    # 获取 LLM 合成回答耗时
+    llm_stats = llama_debug.get_event_time_info(CBEventType.LLM)
+    llm_time = llm_stats.total_secs if hasattr(llm_stats, 'total_secs') else 0
+    
+    print("-" * 30)
     print(f"Query: {query_text}")
     print(f"Response: {response}")
+    print("-" * 30)
+    print(f"性能评估 (Performance Evaluation):")
+    print(f"  - 初始检索 (Bi-Encoder): {retrieval_time:.4f} 秒")
+    print(f"  - 语义重排 (Cross-Encoder): {rerank_time:.4f} 秒")
+    print(f"  - LLM 回答生成: {llm_time:.4f} 秒")
+    print(f"  - 总耗时: {total_duration:.4f} 秒")
+    print("-" * 30)
+    
     logger.info("=== 查询引擎单次测试结束 ===")

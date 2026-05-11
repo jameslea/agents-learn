@@ -67,8 +67,13 @@ def run_evaluation():
         # 1. 执行 RAG 查询
         response = engine.query(case['query'])
         answer = str(response)
+        
         # 获取检索到的上下文原文，用于 LLM 评估忠实度
         context = "\n".join([n.text for n in response.source_nodes])
+        
+        # 调试：打印检索到的源文件
+        sources = [n.metadata.get('file_name', 'Unknown') for n in response.source_nodes]
+        print(f"检索来源: {sources}")
         
         # 2. 基础匹配检查 (Exact Match / Contains)
         is_hit = case['expected_contains'] in answer
