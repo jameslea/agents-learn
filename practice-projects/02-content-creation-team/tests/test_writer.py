@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_DIR))
 
-from crew.writer import build_quality_repair_feedback, writer_node  # noqa: E402
+from crew.writer import build_quality_repair_feedback, build_writer_editorial_contract, writer_node  # noqa: E402
 from sop_artifacts import (  # noqa: E402
     ContentOutline,
     DraftContent,
@@ -81,6 +81,28 @@ def base_state() -> dict:
 
 
 class WriterNodeTests(unittest.TestCase):
+    def test_writer_editorial_contract_sets_stable_density_targets(self):
+        outline = ContentOutline(
+            title="测试报告",
+            target_audience="管理者",
+            sections=[
+                "问题界定与技术基础",
+                "案例一：客户服务Agent落地",
+                "案例二：供应链Agent实践",
+                "风险边界与治理",
+                "实施路径与高管建议",
+            ],
+            key_points=["价值", "边界", "路径"],
+        )
+
+        contract = build_writer_editorial_contract(outline)
+
+        self.assertIn("15-22 个三级小节", contract)
+        self.assertIn("25 条以上列表项", contract)
+        self.assertIn("至少安排 1 个紧凑对比表", contract)
+        self.assertIn("不要把“格式丰富”理解成增加更多短标题", contract)
+        self.assertIn("客户服务Agent", contract)
+
     def test_quality_repair_feedback_preserves_previous_feedback(self):
         previous = ReviewFeedback(
             is_approved=False,
