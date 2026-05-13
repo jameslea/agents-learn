@@ -52,6 +52,7 @@ Thumbs.db
 # Local data (if agents produce output files)
 data/
 outputs/
+practice-projects/02-content-creation-team/reports/
 *.db
 *.sqlite
 

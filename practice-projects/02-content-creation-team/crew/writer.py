@@ -4,16 +4,52 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from sop_artifacts import DraftContent, ResearchReport, ContentOutline, ReviewFeedback
-from crew.json_utils import parse_llm_json
+from utils.json_utils import parse_llm_json
+from utils.logging_utils import get_logger, timed_block
+from utils.quality import (
+    infer_source_tier,
+    normalize_draft_references,
+    ranked_source_records,
+    source_quality_summary,
+    validate_draft,
+)
+from utils.rubric import WRITING_RUBRIC, build_source_audit_text
 
 load_dotenv()
+logger = get_logger(__name__)
+
+MAX_WRITER_QUALITY_REPAIR_ATTEMPTS = 2
+
+
+def build_quality_repair_feedback(
+    quality_issues: list[str],
+    previous_feedback: Optional[ReviewFeedback] = None,
+) -> ReviewFeedback:
+    """把确定性质量门禁问题转成 Writer 可直接吸收的本地修复反馈。"""
+    suggestions = ["先修复程序化质量门禁发现的结构化问题，再保持原有内容质量。"]
+    specific_issues = [f"质量门禁: {issue}" for issue in quality_issues]
+
+    if previous_feedback and not previous_feedback.is_approved:
+        suggestions.extend(previous_feedback.suggestions)
+        specific_issues.extend(previous_feedback.specific_issues)
+
+    return ReviewFeedback(
+        is_approved=False,
+        suggestions=suggestions,
+        specific_issues=specific_issues,
+        target_agent="writer",
+    )
+
 
 class Writer:
     def __init__(self):
+        model = os.getenv("MODEL_NAME", "deepseek-chat")
+        base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
+        logger.info("加载 Writer LLM: model=%s base_url=%s", model, base_url)
         self.llm = ChatOpenAI(
-            model=os.getenv("MODEL_NAME", "deepseek-chat"),
+            model=model,
             api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
+            base_url=base_url,
             model_kwargs={"response_format": {"type": "json_object"}}
         )
 
@@ -27,40 +63,75 @@ class Writer:
         """根据大纲和研究素材撰写初稿，参考历史摘要和评审反馈"""
         system_prompt = (
             "你是一名专业的商业分析师和深度报告作家。你的任务是根据大纲和研究素材，"
-            "撰写一份专业、深度、数据翔实的 Markdown 报告。\n"
-            "严格要求：\n"
-            "1. 正文不少于 3000 字，内容充实，要有分析和解读。\n"
-            "2. **引用格式**：正文中使用数字编号标注来源，如 [1], [2]。不得在正文直接出现 URL。\n"
-            "3. **末尾索引**：在报告末尾增加 '## 参考资料' 章节，按编号列出对应的完整 URL。\n"
-            "4. 报告需包含失败案例或落地教训，不能只写成功案例。\n"
-            "5. 每个章节需要有横向对比或纵向分析，而非单纯罗列。\n"
+            "撰写一份专业、深度、数据翔实且自然流畅的 Markdown 报告。"
+            "优先保证论证质量、材料取舍和读者可读性；格式要求由用户消息给出。"
             "请以 JSON 格式返回，字段值不得使用双引号，用单引号或中文引号代替。"
         )
 
         # 整合素材，带来源绑定
+        selected_sources = ranked_source_records(research, max_sources=15)
+        source_number_by_url = {
+            source["url"]: index
+            for index, source in enumerate(selected_sources, 1)
+        }
         context_parts = []
-        source_pool = []
         for m in research.materials:
+            source_details = []
+            for index, source in enumerate(m.sources, 1):
+                normalized_source = source.strip()
+                if normalized_source not in source_number_by_url:
+                    continue
+                declared_quality = m.source_quality[index - 1] if index - 1 < len(m.source_quality) else "tier_3"
+                quality = infer_source_tier(normalized_source, declared_quality)
+                note = m.source_notes[index - 1] if index - 1 < len(m.source_notes) else "未提供来源可信度说明"
+                source_details.append(
+                    f"章节来源{index} -> 全局[{source_number_by_url[normalized_source]}]: {normalized_source} | {quality} | {note}"
+                )
             context_parts.append(
                 f"### {m.section_name}\n"
                 f"内容: {m.raw_data}\n"
-                f"该章节可用来源: {m.sources}"
+                f"该章节入选来源与可信度:\n" + ("\n".join(source_details) or "无入选来源，避免为该章节引入未给出的具体数字或案例。")
             )
-            source_pool.extend(m.sources)
+        source_index = "\n".join(
+            f"[{index}] {source['url']} | {source['tier']} | {source['note']}"
+            for index, source in enumerate(selected_sources, 1)
+        )
         context = "\n\n".join(context_parts)
+        source_audit = build_source_audit_text(source_quality_summary(research))
+        logger.info(
+            "Writer 整合研究素材: materials=%d selected_sources=%d context_chars=%d",
+            len(research.materials),
+            len(selected_sources),
+            len(context),
+        )
 
         # 评审反馈与历史摘要处理
         history_info = f"\n## 历史执行摘要\n{history_summary}\n" if history_summary else ""
         feedback_section = ""
         if feedback and not feedback.is_approved:
             feedback_section = (
-                "\n## 上一版评审意见（必须全部修复）\n"
+                "\n## 上一版评审意见（优先处理影响通过的问题）\n"
                 f"整体建议:\n" +
                 "\n".join(f"- {s}" for s in feedback.suggestions) +
                 "\n\n章节级具体问题:\n" +
                 "\n".join(f"- {i}" for i in feedback.specific_issues) +
-                "\n\n请在本次修改中逐条解决以上所有问题。\n"
+                "\n\n请优先解决 specific_issues 中影响可信度、结构或引用闭环的问题；"
+                "suggestions 可在不破坏报告自然度的前提下吸收。\n"
             )
+
+        structure_guidance = (
+            "## 首轮通过的结构蓝图（生成前先按此规划，不要输出规划过程）\n"
+            "1. 三级小节用于承载材料密集或需要分层论证的章节，不要给每个主章节机械套 1.1/1.2/1.3。\n"
+            "2. 案例/应用章节通常安排 2-3 个编辑化三级小节，优先使用："
+            "### 成功案例、### 失败教训/挑战与教训、### 横向对比/纵向分析；"
+            "如果某个小节材料不足，应合并到相邻小节，不要硬拆。\n"
+            "3. 风险、证据边界、实施建议或结论前章节至少选择 2 个进行内部拆分，"
+            "但小节标题要服务内容，不要为了凑结构而拆短小节。\n"
+            "4. 实施建议类章节可拆成：### 评估框架、### 分阶段路线图、"
+            "### 常见错误、### 最佳实践；每个小节要解释原因、适用条件和风险。\n"
+            "5. 返回 JSON 前自检：如果某个三级小节只有一两句或一条列表，"
+            "应补充分析或合并；全文允许少量短小节，但不能大量短小节。"
+        )
 
         user_prompt = (
             f"报告标题: {outline.title}\n"
@@ -69,11 +140,25 @@ class Writer:
             f"{history_info}"
             f"{feedback_section}\n"
             f"研究素材（包含数据和对应的来源池）:\n{context}\n\n"
-            "请撰写完整报告初稿（不少于 3000 字），要求：\n"
-            "- 逻辑连贯，每章有分析深度，不仅罗列数据\n"
-            "- 包含至少 1 个失败案例或落地挑战\n"
-            "- **正文引用标记为 [1], [2] 等**\n"
-            "- **报告末尾必须有 '## 参考资料' 列表**\n"
+            f"{source_audit}\n\n"
+            f"可用来源索引（正文和参考资料只能使用这些编号和 URL）:\n{source_index}\n\n"
+            f"{structure_guidance}\n"
+            "请撰写完整报告初稿。输出需满足：\n"
+            f"- 正文不少于 3000 字，以 '# {outline.title}' 开始\n"
+            "- 正文主要章节使用编号标题，如 '## 一、行业背景'；'## 参考资料' 不编号\n"
+            "- 依据章节内容自然安排写法，避免机械套用同一种小标题或段落顺序；全文应包含适量三级小节和列表化结构\n"
+            "- 案例或应用章节优先拆成 '### 成功案例'、'### 失败教训/挑战与教训'、'### 横向对比/纵向分析' 等内部结构，但材料不足时应合并而不是硬拆\n"
+            "- 风险、证据边界、实施建议或结论前章节也要有内部小节，避免只有前半篇结构丰富、后半篇变成连续段落\n"
+            "- 三级小节下面需要有充分正文或清单支撑；如果只能写一两句，应合并到上级章节\n"
+            "- 实施、建议或展望章节应包含清单化的实施路径、最佳实践、常见错误或行动建议\n"
+            "- 不只罗列资料，要有分析判断；整篇报告包含必要的风险、限制、失败案例或落地教训\n"
+            f"- {WRITING_RUBRIC}\n"
+            "- 只有研究素材明确提供且可绑定来源的数字，才能写成具体量化结果\n"
+            "- 对【综合案例】只能概括模式、场景和限制，不得补写具体企业、项目时间、精确收益或损失数字\n"
+            "- 如果缺少公开可核验案例，应直接说明“公开案例不足/仅能作为趋势观察”，不要构造案例填充\n"
+            "- 不能因为案例不足而缩短报告；应通过证据边界、行业对比、实施前提、KPI设计、风险控制和决策建议展开分析\n"
+            "- 正文引用使用 [1], [2] 等编号，不在正文直接写 URL\n"
+            "- 末尾必须有 '## 参考资料'，格式必须是 '[1] https://...'，只列正文实际引用过的来源 URL，不得编造来源\n"
             "- citations 字段仅需列出所有去重后的 URL 列表\n\n"
             "严格按照以下 JSON 格式返回：\n"
             "{\n"
@@ -84,29 +169,87 @@ class Writer:
             "}"
         )
 
-        response = self.llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ])
-        return parse_llm_json(response.content, DraftContent)
+        with timed_block(logger, "Writer LLM 生成初稿", slow_after=25.0):
+            response = self.llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
+        with timed_block(logger, "解析 Writer JSON 输出", slow_after=1.0):
+            return parse_llm_json(response.content, DraftContent)
 
 def writer_node(state):
     """LangGraph 节点函数"""
     print("--- 执行：撰稿人 (Writing) ---")
-    writer = Writer()
-    feedback = state.get("latest_feedback")
-    history_summary = state.get("history_summary", "")
-    if feedback and not feedback.is_approved:
-        print(f"  ↳ 接收评审反馈与历史摘要进行修改")
-    draft = writer.write_draft(
-        state["outline"], 
-        state["research_report"], 
-        feedback=feedback, 
-        history_summary=history_summary
-    )
+    logger.info("进入 Writer 节点")
+    draft = None
+    quality_issues: list[str] = []
+    local_repair_count = 0
+    with timed_block(logger, "Writer 节点总耗时", slow_after=30.0):
+        writer = Writer()
+        feedback = state.get("latest_feedback")
+        active_feedback = feedback
+        history_summary = state.get("history_summary", "")
+        if feedback and not feedback.is_approved:
+            print(f"  ↳ 接收评审反馈与历史摘要进行修改")
+            logger.info(
+                "Writer 接收返工反馈: suggestions=%d issues=%d target=%s",
+                len(feedback.suggestions),
+                len(feedback.specific_issues),
+                feedback.target_agent,
+            )
+        max_attempts = 1 + MAX_WRITER_QUALITY_REPAIR_ATTEMPTS
+        for attempt in range(1, max_attempts + 1):
+            draft = writer.write_draft(
+                state["outline"],
+                state["research_report"],
+                feedback=active_feedback,
+                history_summary=history_summary,
+            )
+            logger.info(
+                "Writer 生成草稿: attempt=%d word_count=%d citations=%d",
+                attempt,
+                draft.word_count,
+                len(draft.citations),
+            )
+            draft = normalize_draft_references(draft)
+            logger.info("Writer 规范化参考资料: citations=%d", len(draft.citations))
+            with timed_block(logger, "Writer 本地质量门禁", slow_after=1.0):
+                quality_issues = validate_draft(draft)
+            if not quality_issues:
+                logger.info("Writer 本地质量门禁通过: attempt=%d", attempt)
+                break
+
+            logger.warning(
+                "Writer 本地质量门禁未通过: attempt=%d issues=%d detail=%s",
+                attempt,
+                len(quality_issues),
+                quality_issues,
+            )
+            if attempt >= max_attempts:
+                break
+
+            local_repair_count += 1
+            print(f"  ↳ 本地质量门禁未通过，Writer 自修第 {local_repair_count} 次")
+            active_feedback = build_quality_repair_feedback(
+                quality_issues,
+                previous_feedback=feedback,
+            )
+    if draft is None:
+        raise RuntimeError("Writer 未生成草稿。")
+
     print(f"  ↳ 生成初稿，字数: {draft.word_count}，引用来源: {len(draft.citations)} 条")
+    logger.info("Writer 初稿生成: word_count=%d citations=%d", draft.word_count, len(draft.citations))
+    history_msg = f"撰稿人生成了初稿（{draft.word_count} 字）"
+    if local_repair_count:
+        history_msg += f"，本地质量自修 {local_repair_count} 次"
+    if quality_issues:
+        logger.warning("初稿质量门禁发现问题: issues=%d detail=%s", len(quality_issues), quality_issues)
+        history_msg += f"，质量门禁发现 {len(quality_issues)} 个问题"
+        history_msg += "：" + "；".join(quality_issues[:3])
+    else:
+        logger.info("初稿质量门禁通过")
     return {
         "draft": draft, 
         "draft_history": [draft],
-        "history": [f"撰稿人生成了初稿（{draft.word_count} 字）"]
+        "history": [history_msg]
     }

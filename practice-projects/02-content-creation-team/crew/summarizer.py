@@ -2,15 +2,20 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from utils.logging_utils import get_logger, timed_block
 
 load_dotenv()
+logger = get_logger(__name__)
 
 class Summarizer:
     def __init__(self):
+        model = os.getenv("MODEL_NAME", "deepseek-chat")
+        base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
+        logger.info("加载 Summarizer LLM: model=%s base_url=%s", model, base_url)
         self.llm = ChatOpenAI(
-            model=os.getenv("MODEL_NAME", "deepseek-chat"),
+            model=model,
             api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
+            base_url=base_url,
         )
 
     def summarize_history(self, history: list[str], current_summary: str = "") -> str:
@@ -28,23 +33,29 @@ class Summarizer:
             "请生成一份最新的、压缩后的历史摘要。"
         )
 
-        response = self.llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ])
+        with timed_block(logger, "Summarizer LLM 压缩历史", slow_after=8.0):
+            response = self.llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ])
         return response.content
 
 def summarizer_node(state):
     """摘要节点：压缩历史上下文"""
     print("--- 执行：摘要助手 (Summarizing) ---")
-    summarizer = Summarizer()
-    # 只有当历史记录较长时才执行真正的 LLM 摘要，否则简单合并
-    if len(state.get("history", [])) > 5:
-        new_summary = summarizer.summarize_history(
-            state["history"], 
-            state.get("history_summary", "")
-        )
-    else:
-        new_summary = state.get("history_summary", "") + "\n" + "\n".join(state.get("history", []))
+    history_len = len(state.get("history", []))
+    logger.info("进入 Summarizer 节点: history_len=%d", history_len)
+    with timed_block(logger, "Summarizer 节点总耗时", slow_after=10.0):
+        summarizer = Summarizer()
+        # 只有当历史记录较长时才执行真正的 LLM 摘要，否则简单合并
+        if history_len > 5:
+            logger.info("历史较长，使用 LLM 摘要: history_len=%d", history_len)
+            new_summary = summarizer.summarize_history(
+                state["history"], 
+                state.get("history_summary", "")
+            )
+        else:
+            logger.info("历史较短，使用本地合并摘要: history_len=%d", history_len)
+            new_summary = state.get("history_summary", "") + "\n" + "\n".join(state.get("history", []))
     
     return {"history_summary": new_summary}

@@ -6,8 +6,10 @@ import re
 import json
 from typing import Type, TypeVar
 from pydantic import BaseModel
+from utils.logging_utils import get_logger, timed_block
 
 T = TypeVar("T", bound=BaseModel)
+logger = get_logger(__name__)
 
 
 def _fix_json(text: str) -> str:
@@ -65,21 +67,31 @@ def parse_llm_json(raw_text: str, model_class: Type[T]) -> T:
     """
     # 先直接尝试
     try:
-        return model_class.model_validate_json(raw_text)
+        with timed_block(logger, f"直接解析 JSON: {model_class.__name__}", slow_after=0.5):
+            return model_class.model_validate_json(raw_text)
     except Exception:
+        logger.debug("直接解析 JSON 失败，尝试修复: model=%s", model_class.__name__)
         pass
 
     # 修复后再试
-    fixed = _fix_json(raw_text)
+    with timed_block(logger, f"修复 JSON 文本: {model_class.__name__}", slow_after=0.5):
+        fixed = _fix_json(raw_text)
     try:
-        return model_class.model_validate_json(fixed)
+        with timed_block(logger, f"解析修复后 JSON: {model_class.__name__}", slow_after=0.5):
+            parsed = model_class.model_validate_json(fixed)
+        logger.info("LLM JSON 通过修复后解析成功: model=%s", model_class.__name__)
+        return parsed
     except Exception:
+        logger.debug("修复后 JSON 解析失败，尝试 json.loads: model=%s", model_class.__name__)
         pass
 
     # 最后用 json.loads 容错解析
     try:
-        obj = json.loads(fixed)
-        return model_class.model_validate(obj)
+        with timed_block(logger, f"json.loads 容错解析: {model_class.__name__}", slow_after=0.5):
+            obj = json.loads(fixed)
+            parsed = model_class.model_validate(obj)
+        logger.info("LLM JSON 通过 json.loads 容错解析成功: model=%s", model_class.__name__)
+        return parsed
     except Exception as e:
         raise ValueError(
             f"无法解析 LLM 输出为 {model_class.__name__}。\n"
@@ -87,3 +99,4 @@ def parse_llm_json(raw_text: str, model_class: Type[T]) -> T:
             f"修复后：\n{fixed}\n"
             f"错误：{e}"
         )
+

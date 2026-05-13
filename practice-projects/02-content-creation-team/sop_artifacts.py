@@ -20,6 +20,26 @@ class ResearchMaterial(BaseModel):
     section_name: str = Field(..., description="对应的章节名称")
     raw_data: str = Field(..., description="搜集到的原始事实、数据或引用，每条关键数据后括号标注来源序号如(来源1)")
     sources: List[str] = Field(..., description="参考来源链接或文献，与 raw_data 中序号一一对应")
+    source_quality: List[str] = Field(
+        default_factory=list,
+        description="每个来源的可信度等级：tier_1/tier_2/tier_3，与 sources 一一对应"
+    )
+    source_notes: List[str] = Field(
+        default_factory=list,
+        description="每个来源的可信度说明或降级原因，与 sources 一一对应"
+    )
+
+    @field_validator('source_quality')
+    @classmethod
+    def normalize_source_quality(cls, v):
+        allowed = {"tier_1", "tier_2", "tier_3"}
+        return [item if item in allowed else "tier_3" for item in v]
+
+    def model_post_init(self, __context):
+        if len(self.source_quality) < len(self.sources):
+            self.source_quality.extend(["tier_3"] * (len(self.sources) - len(self.source_quality)))
+        if len(self.source_notes) < len(self.sources):
+            self.source_notes.extend(["未提供来源可信度说明"] * (len(self.sources) - len(self.source_notes)))
 
 class ResearchReport(BaseModel):
     """整合后的研究摘要"""
@@ -30,7 +50,7 @@ class DraftContent(BaseModel):
     title: str
     content_markdown: str = Field(
         ...,
-        description="Markdown 格式的正文内容，要求 3000 字以上，每条数据点后内联标注来源如 [来源: URL]"
+        description="Markdown 格式的正文内容，要求 3000 字以上，每条数据点后内联标注来源编号如 [1]"
     )
     word_count: int = Field(..., description="正文字数，要求不低于 3000")
     citations: List[str] = Field(
