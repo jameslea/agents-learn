@@ -12,12 +12,30 @@ T = TypeVar("T", bound=BaseModel)
 logger = get_logger(__name__)
 
 
-def _fix_json(text: str) -> str:
-    """尝试修复常见的 JSON 格式错误"""
-    # 提取 { } 之间的内容
+VALID_JSON_ESCAPE_STARTS = r'["\\/bfnrtu]'
+
+
+def _extract_json_object(text: str) -> str:
+    """提取 LLM 输出中的首个 JSON 对象文本。"""
     match = re.search(r'\{.*\}', text, re.DOTALL)
     if match:
-        text = match.group(0)
+        return match.group(0)
+    return text
+
+
+def _escape_invalid_json_backslashes(text: str) -> str:
+    r"""修复 JSON 字符串中的非法反斜杠转义，如 Markdown 的 tier\_1。"""
+    return re.sub(rf'\\(?!{VALID_JSON_ESCAPE_STARTS})', r'\\\\', text)
+
+
+def _fix_json_escapes(text: str) -> str:
+    """只做低风险修复，避免正则误伤正文中的 URL、表格或 Markdown。"""
+    return _escape_invalid_json_backslashes(_extract_json_object(text))
+
+
+def _fix_json(text: str) -> str:
+    """尝试修复常见的 JSON 格式错误"""
+    text = _fix_json_escapes(text)
 
     # 1. 修复：未加引号的键名 (Naked Keys)
     # 例如 { is_approved: true } -> { "is_approved": true }
@@ -67,18 +85,30 @@ def parse_llm_json(raw_text: str, model_class: Type[T]) -> T:
     """
     # 先直接尝试
     try:
-        with timed_block(logger, f"直接解析 JSON: {model_class.__name__}", slow_after=0.5):
-            return model_class.model_validate_json(raw_text)
+        parsed = model_class.model_validate_json(raw_text)
+        logger.debug("LLM JSON 直接解析成功: model=%s", model_class.__name__)
+        return parsed
     except Exception:
         logger.debug("直接解析 JSON 失败，尝试修复: model=%s", model_class.__name__)
         pass
 
-    # 修复后再试
+    # 先做低风险转义修复。DeepSeek 偶尔会把 Markdown 转义符写进 JSON 字符串，
+    # 例如 tier\_1；这类问题不需要进入后续更激进的结构修复。
+    with timed_block(logger, f"修复 JSON 转义文本: {model_class.__name__}", slow_after=0.5):
+        fixed = _fix_json_escapes(raw_text)
+    try:
+        parsed = model_class.model_validate_json(fixed)
+        logger.info("LLM JSON 通过转义修复后解析成功: model=%s", model_class.__name__)
+        return parsed
+    except Exception:
+        logger.debug("转义修复后 JSON 解析失败，尝试结构修复: model=%s", model_class.__name__)
+        pass
+
+    # 结构修复后再试
     with timed_block(logger, f"修复 JSON 文本: {model_class.__name__}", slow_after=0.5):
         fixed = _fix_json(raw_text)
     try:
-        with timed_block(logger, f"解析修复后 JSON: {model_class.__name__}", slow_after=0.5):
-            parsed = model_class.model_validate_json(fixed)
+        parsed = model_class.model_validate_json(fixed)
         logger.info("LLM JSON 通过修复后解析成功: model=%s", model_class.__name__)
         return parsed
     except Exception:
@@ -87,9 +117,8 @@ def parse_llm_json(raw_text: str, model_class: Type[T]) -> T:
 
     # 最后用 json.loads 容错解析
     try:
-        with timed_block(logger, f"json.loads 容错解析: {model_class.__name__}", slow_after=0.5):
-            obj = json.loads(fixed)
-            parsed = model_class.model_validate(obj)
+        obj = json.loads(fixed)
+        parsed = model_class.model_validate(obj)
         logger.info("LLM JSON 通过 json.loads 容错解析成功: model=%s", model_class.__name__)
         return parsed
     except Exception as e:
@@ -99,4 +128,3 @@ def parse_llm_json(raw_text: str, model_class: Type[T]) -> T:
             f"修复后：\n{fixed}\n"
             f"错误：{e}"
         )
-

@@ -15,8 +15,10 @@ from utils.source_quality import infer_source_tier
 
 
 TARGET_MAIN_SECTION_RANGE = (8, 10)
-TARGET_SUBSECTION_RANGE = (15, 22)
+TARGET_SUBSECTION_RANGE = (15, 19)
 TARGET_MIN_LIST_ITEMS = 25
+TARGET_LIST_ITEM_RANGE = (28, 40)
+FRAGMENTED_LIST_ITEM_COUNT = 50
 TARGET_MIN_REFERENCES = 10
 TARGET_MIN_AVG_SUBSECTION_UNITS = 100
 TARGET_MAX_THIN_SUBSECTIONS = 2
@@ -175,8 +177,8 @@ def _editorial_score(metrics: ReportQualityMetrics) -> int:
     keyword_hits = structural_keyword_hits_from_counts(metrics.keyword_counts)
     score = 0
     score += _band_score(metrics.main_sections, 8, 10, 4, 14, 12)
-    score += _band_score(metrics.subsections, 15, 22, 5, 30, 14)
-    score += min(14, round(metrics.list_items / TARGET_MIN_LIST_ITEMS * 14))
+    score += _band_score(metrics.subsections, 15, 19, 5, 28, 14)
+    score += _band_score(metrics.list_items, TARGET_LIST_ITEM_RANGE[0], TARGET_LIST_ITEM_RANGE[1], 8, 70, 14)
     score += _band_score(round(metrics.avg_subsection_units), 100, 180, 60, 260, 14)
     score += max(0, 10 - max(0, metrics.thin_subsections - TARGET_MAX_THIN_SUBSECTIONS) * 3)
     score += min(14, metrics.case_rhythm_sections * 4)
@@ -223,7 +225,7 @@ def _band_score(value: int, ideal_min: int, ideal_max: int, lower: int, upper: i
 
 def _format_variety_score(metrics: ReportQualityMetrics) -> int:
     score = 0
-    if metrics.list_items >= TARGET_MIN_LIST_ITEMS:
+    if TARGET_LIST_ITEM_RANGE[0] <= metrics.list_items <= TARGET_LIST_ITEM_RANGE[1]:
         score += 2
     if metrics.subsections >= TARGET_SUBSECTION_RANGE[0]:
         score += 2
@@ -242,8 +244,8 @@ def _strengths(metrics: ReportQualityMetrics) -> list[str]:
         strengths.append("主章节数量接近目标样本")
     if TARGET_SUBSECTION_RANGE[0] <= metrics.subsections <= TARGET_SUBSECTION_RANGE[1]:
         strengths.append("三级小节数量充足且不过度")
-    if metrics.list_items >= TARGET_MIN_LIST_ITEMS:
-        strengths.append("列表密度较高，信息呈现有变化")
+    if TARGET_LIST_ITEM_RANGE[0] <= metrics.list_items <= TARGET_LIST_ITEM_RANGE[1]:
+        strengths.append("列表密度较高且不过度碎片化")
     if metrics.case_rhythm_sections >= 3:
         strengths.append("多个案例章节具备成功、挑战和分析节奏")
     if metrics.later_structured_sections >= 2:
@@ -261,6 +263,8 @@ def _issues(metrics: ReportQualityMetrics) -> list[str]:
         issues.append(f"三级小节数量 {metrics.subsections} 高于目标上限 {TARGET_SUBSECTION_RANGE[1]}，可能标题堆叠。")
     if metrics.list_items < TARGET_MIN_LIST_ITEMS:
         issues.append(f"列表项数量 {metrics.list_items} 少于目标下限 {TARGET_MIN_LIST_ITEMS}，格式变化不足。")
+    if metrics.list_items > FRAGMENTED_LIST_ITEM_COUNT:
+        issues.append(f"列表项数量 {metrics.list_items} 过多，可能把分析切成过多要点，阅读体验偏碎。")
     if metrics.avg_subsection_units < TARGET_MIN_AVG_SUBSECTION_UNITS:
         issues.append(f"小节平均厚度 {metrics.avg_subsection_units} 低于目标下限 {TARGET_MIN_AVG_SUBSECTION_UNITS}。")
     if metrics.thin_subsections > TARGET_MAX_THIN_SUBSECTIONS:

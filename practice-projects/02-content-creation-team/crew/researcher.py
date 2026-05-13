@@ -3,10 +3,10 @@ import re
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from sop_artifacts import ResearchMaterial, ResearchReport, ContentOutline, ReviewFeedback
+from sop_artifacts import CaseCandidate, ResearchMaterial, ResearchReport, ContentOutline, ReviewFeedback
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
-from utils.quality import source_quality_summary, source_quality_warnings, validate_research_report
+from utils.quality import infer_source_tier, source_quality_summary, source_quality_warnings, validate_research_report
 from utils.rubric import RESEARCH_RUBRIC
 from typing import Optional
 
@@ -16,6 +16,10 @@ logger = get_logger(__name__)
 MAX_RESEARCH_RETRY_SECTIONS = 2
 MAX_GLOBAL_FEEDBACK_ITEMS = 2
 MAX_MATERIAL_EXTRACTION_ATTEMPTS = 2
+SEARCH_RESULT_LIMIT = 6
+SOURCE_TIER_RANK = {"tier_1": 0, "tier_2": 1, "tier_3": 2}
+CASE_SECTION_KEYWORDS = ("案例", "场景", "实践", "应用", "落地")
+CASE_EVIDENCE_FEEDBACK_KEYWORDS = ("案例", "综合案例", "无法核验", "企业名称", "真实企业", "厂商", "独立验证")
 
 
 def _shorten(text: str, limit: int = 160) -> str:
@@ -76,6 +80,14 @@ def select_sections_for_research(
         return [section for section in sections if section in section_issues][:max_sections]
 
     if global_issues:
+        if any(keyword in " ".join(global_issues) for keyword in CASE_EVIDENCE_FEEDBACK_KEYWORDS):
+            case_sections = [
+                section
+                for section in sections
+                if any(keyword in section for keyword in CASE_SECTION_KEYWORDS)
+            ]
+            if case_sections:
+                return case_sections[:max_sections]
         return sections[:max_sections]
 
     return []
@@ -136,6 +148,63 @@ def material_quality_issues(material: ResearchMaterial) -> list[str]:
     return validate_research_report(ResearchReport(materials=[material]))
 
 
+def normalize_case_candidates(material: ResearchMaterial) -> ResearchMaterial:
+    """规范化案例候选来源等级，避免 LLM 误报强来源。"""
+    normalized: list[CaseCandidate] = []
+    for candidate in material.case_candidates:
+        inferred_tier = infer_source_tier(candidate.source_url, candidate.source_tier)
+        is_named = candidate.name.strip() not in {"", "未命名", "匿名", "综合案例", "某企业", "某公司"}
+        is_independently_useful = candidate.verification_status in {"verified", "aggregate"} and inferred_tier in {"tier_1", "tier_2"}
+        normalized.append(
+            candidate.model_copy(
+                update={
+                    "source_tier": inferred_tier,
+                    "is_writable_case": bool(candidate.is_writable_case and is_named and is_independently_useful),
+                }
+            )
+        )
+    return material.model_copy(update={"case_candidates": normalized})
+
+
+def prioritize_search_results(search_results, max_results: int = SEARCH_RESULT_LIMIT):
+    """按来源质量对 Tavily 搜索结果排序并标注，降低弱来源被优先提炼的概率。"""
+    if not isinstance(search_results, dict):
+        return search_results
+
+    results = search_results.get("results")
+    if not isinstance(results, list):
+        return search_results
+
+    annotated_results = []
+    for order, result in enumerate(results):
+        if not isinstance(result, dict):
+            annotated_results.append((SOURCE_TIER_RANK["tier_3"], order, result))
+            continue
+
+        url = str(result.get("url") or result.get("link") or "")
+        tier = infer_source_tier(url, "tier_3")
+        result_copy = dict(result)
+        result_copy["source_quality_hint"] = tier
+        result_copy["source_use_guidance"] = _source_use_guidance(tier)
+        annotated_results.append((SOURCE_TIER_RANK.get(tier, 3), order, result_copy))
+
+    ranked_results = [result for _rank, _order, result in sorted(annotated_results, key=lambda item: (item[0], item[1]))]
+    selected_results = ranked_results[:max_results]
+    return {
+        **search_results,
+        "results": selected_results,
+        "source_selection_note": (
+            "搜索结果已按来源质量排序：tier_1/tier_2 优先；tier_3、博客、社区和聚合资讯仅作辅助线索。"
+        ),
+    }
+
+
+def _source_use_guidance(tier: str) -> str:
+    if tier in {"tier_1", "tier_2"}:
+        return "可优先提炼；适合支撑事实、数据或案例结论。"
+    return "弱来源；仅作辅助线索，不能单独支撑核心数字、ROI或可核验案例。"
+
+
 class Researcher:
     def __init__(self):
         model = os.getenv("MODEL_NAME", "deepseek-chat")
@@ -150,8 +219,8 @@ class Researcher:
         with timed_block(logger, "加载 langchain_tavily.TavilySearch", slow_after=2.0):
             from langchain_tavily import TavilySearch
 
-        logger.info("初始化 TavilySearch: max_results=5 topic=general")
-        self.search_tool = TavilySearch(max_results=5, topic="general")
+        logger.info("初始化 TavilySearch: max_results=8 topic=general")
+        self.search_tool = TavilySearch(max_results=8, topic="general")
 
     def conduct_research(
         self,
@@ -258,10 +327,12 @@ class Researcher:
             scoped_feedback,
         )
         material = normalize_source_numbers(material)
+        material = normalize_case_candidates(material)
         logger.info(
-            "章节调研完成: section=%s sources=%d raw_chars=%d",
+            "章节调研完成: section=%s sources=%d case_candidates=%d raw_chars=%d",
             material.section_name,
             len(material.sources),
+            len(material.case_candidates),
             len(material.raw_data),
         )
         return material
@@ -280,7 +351,8 @@ class Researcher:
             _shorten(search_query, 220),
         )
         with timed_block(logger, f"Tavily 搜索: {section}", slow_after=8.0):
-            return self.search_tool.invoke({"query": search_query})
+            search_results = self.search_tool.invoke({"query": search_query})
+        return prioritize_search_results(search_results)
 
     def _build_search_query(
         self,
@@ -291,11 +363,11 @@ class Researcher:
         """构造 Tavily 搜索词，兼顾主题、章节和定向返工反馈。"""
         search_query = (
             f"{outline.title} {section} 深度资料 行业数据 实际案例 "
-            "官方报告 白皮书 研究报告 官方案例 filetype:pdf"
+            "真实企业 客户案例 官方案例 case study 官方报告 白皮书 研究报告 filetype:pdf"
         )
         if scoped_feedback:
             search_hint = " ".join(_shorten(item, 80) for item in scoped_feedback[:3])
-            search_query += f" {search_hint} 权威来源 可核验案例 失败教训"
+            search_query += f" {search_hint} 权威来源 可核验案例 失败教训 企业名称 独立验证 press release annual report"
             print(f"  ↳ 针对评审问题补充搜索: {_shorten(search_hint)}")
             logger.info(
                 "章节调研带反馈: section=%s feedback_items=%d",
@@ -372,6 +444,7 @@ class Researcher:
             "从搜索结果中提炼高质量、有事实支撑、可被后续写作直接使用的素材。"
             "关键数据、关键事实和案例结论需要在括号内标注来源序号，如（来源1）（来源2）。"
             "sources、source_quality、source_notes 需与 raw_data 中使用的来源序号对应。"
+            "同时必须识别 case_candidates：能写成具体案例的候选、只能作为厂商案例或趋势观察的候选都要列出。"
             f"{RESEARCH_RUBRIC}"
             "请以 JSON 格式返回，字段值中不得使用双引号，用单引号或中文引号代替。"
         )
@@ -398,11 +471,26 @@ class Researcher:
             '  "raw_data": "数据1（来源1）数据2（来源2）...（不得含双引号）",\n'
             '  "sources": ["来源1的完整URL", "来源2的完整URL"],\n'
             '  "source_quality": ["tier_1", "tier_2"],\n'
-            '  "source_notes": ["来源1可信度说明或降级原因", "来源2可信度说明或降级原因"]\n'
+            '  "source_notes": ["来源1可信度说明或降级原因", "来源2可信度说明或降级原因"],\n'
+            '  "case_candidates": [\n'
+            '    {\n'
+            '      "name": "企业/机构/产品名称；无法命名写未命名",\n'
+            '      "scenario": "业务场景",\n'
+            '      "evidence": "能支撑或限制该案例的事实与数据，不得含双引号",\n'
+            '      "source_url": "支撑该候选案例的URL",\n'
+            '      "source_tier": "tier_1或tier_2或tier_3",\n'
+            '      "verification_status": "verified/vendor_claim/aggregate/anonymous/trend_observation",\n'
+            '      "is_writable_case": true或false\n'
+            '    }\n'
+            '  ]\n'
             "}\n"
             "约束：raw_data 中出现的最大来源编号不得超过 sources 数组长度；"
             "sources 不能为空，raw_data 中每个关键事实必须绑定 sources 中的来源编号；"
-            "不要为了凑数量保留明显无关或低可信来源。"
+            "不要为了凑数量保留明显无关或低可信来源；"
+            "搜索结果中的 source_quality_hint 和 source_use_guidance 是确定性来源提示，"
+            "优先从 tier_1/tier_2 中提炼核心事实，tier_3 只能作辅助线索；"
+            "case_candidates 中只有同时具备明确名称、可核验上下文、来源较强且非单纯厂商自述时，"
+            "is_writable_case 才能为 true；匿名、综合案例、厂商单方宣传必须为 false。"
         )
 
     def _build_feedback_note(self, scoped_feedback: list[str]) -> str:

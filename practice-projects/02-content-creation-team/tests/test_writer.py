@@ -7,8 +7,9 @@ from unittest.mock import Mock, patch
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_DIR))
 
-from crew.writer import build_quality_repair_feedback, build_writer_editorial_contract, writer_node  # noqa: E402
+from crew.writer import build_quality_repair_feedback, build_writer_editorial_contract, format_case_candidates, writer_node  # noqa: E402
 from sop_artifacts import (  # noqa: E402
+    CaseCandidate,
     ContentOutline,
     DraftContent,
     ResearchMaterial,
@@ -97,10 +98,12 @@ class WriterNodeTests(unittest.TestCase):
 
         contract = build_writer_editorial_contract(outline)
 
-        self.assertIn("15-22 个三级小节", contract)
-        self.assertIn("25 条以上列表项", contract)
+        self.assertIn("15-19 个有效三级小节", contract)
+        self.assertIn("28-40 条列表项", contract)
+        self.assertIn("列表超过 50 条", contract)
         self.assertIn("至少安排 1 个紧凑对比表", contract)
         self.assertIn("不要把“格式丰富”理解成增加更多短标题", contract)
+        self.assertIn("不要把弱证据拆成多个短小节", contract)
         self.assertIn("客户服务Agent", contract)
 
     def test_quality_repair_feedback_preserves_previous_feedback(self):
@@ -120,6 +123,41 @@ class WriterNodeTests(unittest.TestCase):
         self.assertIn("补充案例限制。", feedback.suggestions)
         self.assertIn("案例: 来源质量弱。", feedback.specific_issues)
         self.assertTrue(any(issue.startswith("质量门禁:") for issue in feedback.specific_issues))
+
+    def test_format_case_candidates_marks_unwritable_candidates(self):
+        material = ResearchMaterial(
+            section_name="案例",
+            raw_data="事实（来源1）。",
+            sources=["https://example.com/report"],
+            case_candidates=[
+                CaseCandidate(
+                    name="未命名",
+                    scenario="制造业运维",
+                    evidence="匿名综合案例，缺少企业名",
+                    source_url="https://example.com/report",
+                    source_tier="tier_3",
+                    verification_status="anonymous",
+                    is_writable_case=False,
+                )
+            ],
+        )
+
+        formatted = format_case_candidates(material)
+
+        self.assertIn("不可作为核心案例", formatted)
+        self.assertIn("未命名", formatted)
+
+    def test_format_case_candidates_warns_when_empty(self):
+        material = ResearchMaterial(
+            section_name="案例",
+            raw_data="趋势事实（来源1）。",
+            sources=["https://example.com/report"],
+        )
+
+        formatted = format_case_candidates(material)
+
+        self.assertIn("无可核验案例候选", formatted)
+        self.assertIn("不得编造成具体企业案例", formatted)
 
     def test_writer_node_repairs_deterministic_quality_issues_locally(self):
         first = DraftContent(

@@ -56,6 +56,12 @@ class ReportEvaluationTests(unittest.TestCase):
         self.assertGreater(metrics.thin_subsections, 2)
         self.assertTrue(any("过薄小节" in issue for issue in metrics.issues))
 
+    def test_evaluate_report_quality_warns_about_fragmented_lists(self):
+        metrics = evaluate_report_quality(sample_report(list_items=61), name="fragmented")
+
+        self.assertGreater(metrics.list_items, 50)
+        self.assertTrue(any("列表项数量 61 过多" in issue for issue in metrics.issues))
+
     def test_historical_samples_match_reading_order_when_available(self):
         better_path = PROJECT_DIR / "reports/rejected_report_20260513_094340.md"
         worse_path = PROJECT_DIR / "reports/rejected_report_20260513_113714.md"

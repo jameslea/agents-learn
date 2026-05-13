@@ -15,6 +15,28 @@ class ContentOutline(BaseModel):
             return [v]
         return v
 
+class CaseCandidate(BaseModel):
+    """研究员从资料中识别出的案例候选，用于区分可核验案例和趋势/综合案例。"""
+    name: str = Field(..., description="企业、机构或产品名称；无法命名时写'未命名'")
+    scenario: str = Field(..., description="案例对应的业务场景")
+    evidence: str = Field(..., description="可支撑该案例的事实、数据或限制说明")
+    source_url: str = Field(..., description="支撑该候选案例的来源 URL")
+    source_tier: str = Field("tier_3", description="来源可信度：tier_1/tier_2/tier_3")
+    verification_status: str = Field(
+        "anonymous",
+        description="verified/vendor_claim/aggregate/anonymous/trend_observation"
+    )
+    is_writable_case: bool = Field(
+        False,
+        description="是否足以写成报告中的具体案例；匿名、综合、厂商自述通常为 false"
+    )
+
+    @field_validator('source_tier')
+    @classmethod
+    def normalize_source_tier(cls, v):
+        allowed = {"tier_1", "tier_2", "tier_3"}
+        return v if v in allowed else "tier_3"
+
 class ResearchMaterial(BaseModel):
     """由研究员搜集的素材"""
     section_name: str = Field(..., description="对应的章节名称")
@@ -27,6 +49,10 @@ class ResearchMaterial(BaseModel):
     source_notes: List[str] = Field(
         default_factory=list,
         description="每个来源的可信度说明或降级原因，与 sources 一一对应"
+    )
+    case_candidates: List[CaseCandidate] = Field(
+        default_factory=list,
+        description="本章节可写成案例或只能降级为趋势观察的候选案例"
     )
 
     @field_validator('source_quality')

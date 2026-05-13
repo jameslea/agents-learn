@@ -33,6 +33,7 @@ class GraphState(TypedDict, total=False):
     draft_history: Annotated[List[DraftContent], operator.add]  # 存储所有版本的 Draft
     latest_feedback: ReviewFeedback
     review_count: int
+    quality_enhancement_count: int
     history: Annotated[List[str], operator.add]
     history_summary: str  # 压缩后的历史摘要
 
@@ -197,6 +198,7 @@ if __name__ == "__main__":
     initial_state = {
         "topic": "2026 年 AI Agent 在企业数字转型中的实际应用案例",
         "review_count": 0,
+        "quality_enhancement_count": 0,
         "history": ["任务启动"],
         "history_summary": "",
         "draft_history": []
@@ -251,6 +253,8 @@ if __name__ == "__main__":
     print(f"  字数     : {draft.word_count}")
     print(f"  引用来源 : {len(draft.citations)} 条")
     print(f"  评审次数 : {final_state['review_count']}")
+    if final_state.get("quality_enhancement_count"):
+        print(f"  质量增强 : {final_state['quality_enhancement_count']} 次")
     if latest_feedback and not is_approved:
         print("  未通过原因 :")
         for issue in latest_feedback.specific_issues[:5]:

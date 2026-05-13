@@ -13,10 +13,11 @@ from crew.researcher import (  # noqa: E402
     material_quality_issues,
     merge_research_materials,
     normalize_source_numbers,
+    prioritize_search_results,
     select_sections_for_research,
     source_number_issues,
 )
-from sop_artifacts import ContentOutline, ResearchMaterial, ResearchReport, ReviewFeedback  # noqa: E402
+from sop_artifacts import CaseCandidate, ContentOutline, ResearchMaterial, ResearchReport, ReviewFeedback  # noqa: E402
 
 
 class ResearchFeedbackTests(unittest.TestCase):
@@ -122,6 +123,24 @@ class ResearchFeedbackTests(unittest.TestCase):
 
         self.assertEqual(selected, ["金融", "制造"])
 
+    def test_global_case_feedback_prioritizes_case_sections(self):
+        feedback = ReviewFeedback(
+            is_approved=False,
+            suggestions=["所有案例均为综合案例，无法核验具体企业名称。"],
+            specific_issues=[],
+            target_agent="researcher",
+        )
+        existing = ResearchReport(materials=[])
+
+        selected = select_sections_for_research(
+            ["技术基础", "案例一：制造业", "案例二：金融业", "实施路径"],
+            feedback,
+            existing,
+            max_sections=2,
+        )
+
+        self.assertEqual(selected, ["案例一：制造业", "案例二：金融业"])
+
     def test_merge_research_materials_preserves_order_and_replaces_refreshed(self):
         existing = ResearchReport(
             materials=[
@@ -186,6 +205,40 @@ class ResearchFeedbackTests(unittest.TestCase):
 
         self.assertTrue(any("缺少来源 URL" in issue for issue in issues))
 
+    def test_normalize_case_candidates_downgrades_anonymous_or_vendor_claims(self):
+        from crew.researcher import normalize_case_candidates
+
+        material = ResearchMaterial(
+            section_name="案例",
+            raw_data="事实（来源1）。",
+            sources=["https://example.com/report"],
+            case_candidates=[
+                CaseCandidate(
+                    name="未命名",
+                    scenario="供应链调度",
+                    evidence="匿名综合案例",
+                    source_url="https://mckinsey.com/report.pdf",
+                    source_tier="tier_1",
+                    verification_status="verified",
+                    is_writable_case=True,
+                ),
+                CaseCandidate(
+                    name="某厂商客户",
+                    scenario="客服Agent",
+                    evidence="厂商自述成效",
+                    source_url="https://vendor.example.com/case",
+                    source_tier="tier_3",
+                    verification_status="vendor_claim",
+                    is_writable_case=True,
+                ),
+            ],
+        )
+
+        normalized = normalize_case_candidates(material)
+
+        self.assertFalse(normalized.case_candidates[0].is_writable_case)
+        self.assertFalse(normalized.case_candidates[1].is_writable_case)
+
     def test_extract_material_retries_when_sources_are_missing(self):
         first_response = Mock()
         first_response.content = """
@@ -226,6 +279,43 @@ class ResearchFeedbackTests(unittest.TestCase):
 
         self.assertEqual(material.sources, ["https://example.com/report"])
         self.assertEqual(researcher.llm.invoke.call_count, 2)
+
+    def test_prioritize_search_results_ranks_strong_sources_first(self):
+        search_results = {
+            "results": [
+                {"url": "https://zhihu.com/p/123", "content": "弱来源"},
+                {"url": "https://mckinsey.com/capabilities/report.pdf", "content": "强来源"},
+                {"url": "https://thepaper.cn/newsDetail_forward_1", "content": "媒体来源"},
+            ]
+        }
+
+        prioritized = prioritize_search_results(search_results)
+        urls = [result["url"] for result in prioritized["results"]]
+
+        self.assertEqual(urls[0], "https://mckinsey.com/capabilities/report.pdf")
+        self.assertEqual(prioritized["results"][0]["source_quality_hint"], "tier_1")
+        self.assertIn("不能单独支撑核心数字", prioritized["results"][-1]["source_use_guidance"])
+        self.assertIn("按来源质量排序", prioritized["source_selection_note"])
+
+    def test_material_prompt_uses_source_quality_hints(self):
+        researcher = Researcher.__new__(Researcher)
+        outline = ContentOutline(
+            title="测试报告",
+            target_audience="管理者",
+            sections=["案例"],
+            key_points=["事实"],
+        )
+
+        prompt = researcher._material_user_prompt(
+            outline,
+            "案例",
+            {"results": []},
+            "",
+            "",
+        )
+
+        self.assertIn("source_quality_hint", prompt)
+        self.assertIn("优先从 tier_1/tier_2 中提炼核心事实", prompt)
 
 
 if __name__ == "__main__":

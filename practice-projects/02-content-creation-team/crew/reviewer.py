@@ -6,10 +6,72 @@ from sop_artifacts import ReviewFeedback, DraftContent
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
 from utils.quality import validate_draft
+from utils.report_evaluation import ReportQualityMetrics, evaluate_report_quality
 from utils.rubric import REVIEW_RUBRIC
 
 load_dotenv()
 logger = get_logger(__name__)
+
+MAX_QUALITY_ENHANCEMENT_ROUNDS = 1
+QUALITY_ENHANCEMENT_MAX_REVIEW_COUNT = 3
+HIGH_QUALITY_MIN_UNITS = 3800
+HIGH_QUALITY_MIN_CASE_RHYTHM_SECTIONS = 4
+
+
+def quality_enhancement_issues(metrics: ReportQualityMetrics) -> list[str]:
+    """返回通过后仍值得做 Writer 增强的问题，不作为硬性事实拒绝。"""
+    issues: list[str] = []
+
+    if metrics.units < HIGH_QUALITY_MIN_UNITS:
+        issues.append(
+            f"全文有效长度 {metrics.units} 低于高质量目标 {HIGH_QUALITY_MIN_UNITS}，"
+            "需要补厚案例过程、证据边界、实施条件或决策建议。"
+        )
+    if metrics.subsections < 15:
+        issues.append(f"三级小节数量 {metrics.subsections} 偏少，后半部分或案例章节可能不够展开。")
+    if metrics.subsections > 19:
+        issues.append(f"三级小节数量 {metrics.subsections} 偏多，可能存在标题堆叠，应合并薄弱小节。")
+    if metrics.list_items < 25:
+        issues.append(f"列表项数量 {metrics.list_items} 偏少，实施路径、风险边界或建议部分的信息密度不足。")
+    if metrics.list_items > 50:
+        issues.append(f"列表项数量 {metrics.list_items} 过多，报告可能过碎，应改写为段落分析或表格。")
+    if metrics.avg_subsection_units < 100:
+        issues.append(f"小节平均厚度 {metrics.avg_subsection_units} 偏低，需要减少短段落堆叠。")
+    if metrics.thin_subsections > 2:
+        issues.append(f"过薄小节 {metrics.thin_subsections} 个，需合并或补充分析。")
+    if metrics.case_rhythm_sections < HIGH_QUALITY_MIN_CASE_RHYTHM_SECTIONS:
+        issues.append(
+            f"具备成功/挑战/分析完整节奏的案例章节只有 {metrics.case_rhythm_sections} 个，"
+            "案例分析深度仍不足。"
+        )
+
+    return issues[:5]
+
+
+def should_request_quality_enhancement(
+    state: dict,
+    metrics: ReportQualityMetrics,
+    review_count: int,
+) -> list[str]:
+    """判断 Reviewer 已通过后是否仍应进行一次质量增强轮。"""
+    if review_count >= QUALITY_ENHANCEMENT_MAX_REVIEW_COUNT:
+        return []
+    if state.get("quality_enhancement_count", 0) >= MAX_QUALITY_ENHANCEMENT_ROUNDS:
+        return []
+    return quality_enhancement_issues(metrics)
+
+
+def build_quality_enhancement_feedback(issues: list[str]) -> ReviewFeedback:
+    return ReviewFeedback(
+        is_approved=False,
+        suggestions=[
+            "报告已达到基本通过线，但尚未达到高质量样本标准；请做一轮 Writer 增强，而不是重新堆砌资料。",
+            "增强重点是补厚案例过程、合并碎片化小节、增加证据边界和决策建议；不得新增研究素材之外的事实或数字。",
+        ],
+        specific_issues=[f"质量增强: {issue}" for issue in issues],
+        target_agent="writer",
+    )
+
 
 class Reviewer:
     def __init__(self):
@@ -116,6 +178,32 @@ def reviewer_node(state):
         reviewer = Reviewer()
         feedback = reviewer.review_draft(state["draft"])
     new_count = state.get("review_count", 0) + 1
+
+    if feedback.is_approved:
+        metrics = evaluate_report_quality(state["draft"].content_markdown, name=state["draft"].title)
+        enhancement_issues = should_request_quality_enhancement(state, metrics, new_count)
+        if enhancement_issues:
+            feedback = build_quality_enhancement_feedback(enhancement_issues)
+            status = "需增强 🔁"
+            print(f"  ↳ 第 {new_count} 次评审结果：通过但质量增强 🔁")
+            logger.info(
+                "Reviewer 通过后触发质量增强: round=%d units=%d subsections=%d list_items=%d issues=%s",
+                new_count,
+                metrics.units,
+                metrics.subsections,
+                metrics.list_items,
+                enhancement_issues,
+            )
+            return {
+                "latest_feedback": feedback,
+                "review_count": new_count,
+                "quality_enhancement_count": state.get("quality_enhancement_count", 0) + 1,
+                "history": [
+                    f"评审员完成第 {new_count} 次评审：{status}，质量增强问题 {len(enhancement_issues)} 条："
+                    + "；".join(enhancement_issues[:3])
+                ],
+            }
+
     status = "通过 ✅" if feedback.is_approved else "拒绝 ❌"
     print(f"  ↳ 第 {new_count} 次评审结果：{status}")
     logger.info(
