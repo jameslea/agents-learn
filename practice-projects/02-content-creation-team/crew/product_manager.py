@@ -3,18 +3,28 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from sop_artifacts import ContentOutline
+from utils.cost_utils import tracked_call
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
 from utils.outline_evaluation import (
     MAX_OUTLINE_SECTIONS,
     MIN_OUTLINE_SECTIONS,
+    OutlineQualityMetrics,
+    evaluate_outline_quality,
     validate_outline,
+)
+from utils.outline_selection import (
+    OutlineJudgeResult,
+    judge_outline_candidates,
+    select_top_outline_metrics,
 )
 
 load_dotenv()
 logger = get_logger(__name__)
 
 MAX_OUTLINE_ATTEMPTS = 2
+DEFAULT_OUTLINE_CANDIDATE_SAMPLES = 5
+DEFAULT_OUTLINE_TOP_N = 3
 
 
 class ProductManager:
@@ -57,6 +67,57 @@ class ProductManager:
             + "\n".join(f"- {issue}" for issue in latest_issues)
         )
 
+    def plan_outline_candidates(
+        self,
+        topic: str,
+        samples: int = DEFAULT_OUTLINE_CANDIDATE_SAMPLES,
+        top_n: int = DEFAULT_OUTLINE_TOP_N,
+        llm_judge: bool = True,
+    ) -> tuple[ContentOutline, list[ContentOutline], list[OutlineQualityMetrics], OutlineJudgeResult | None]:
+        """生成多个候选大纲，按本地评分筛选，并可选使用 LLM 主编评审选择默认大纲。"""
+        candidates: list[ContentOutline] = []
+        metrics: list[OutlineQualityMetrics] = []
+
+        for index in range(1, samples + 1):
+            logger.info("PM 生成候选大纲: index=%d/%d", index, samples)
+            outline = self.plan_content(topic)
+            metric = evaluate_outline_quality(outline, name=f"sample_{index}")
+            candidates.append(outline)
+            metrics.append(metric)
+            logger.info(
+                "PM 候选大纲评分: name=%s score=%d sections=%d cases=%d specific=%d generic=%d decision=%d",
+                metric.name,
+                metric.total_score,
+                metric.section_count,
+                metric.case_sections,
+                metric.specific_case_sections,
+                metric.generic_case_sections,
+                metric.decision_value_sections,
+            )
+
+        selected_metrics = select_top_outline_metrics(metrics, top_n)
+        metric_by_name = {metric.name: metric for metric in selected_metrics}
+        outline_by_name = {
+            metric.name: outline
+            for outline, metric in zip(candidates, metrics)
+            if metric.name in metric_by_name
+        }
+        selected_candidates = [outline_by_name[metric.name] for metric in selected_metrics]
+
+        judge_result = judge_outline_candidates(topic, selected_metrics) if llm_judge and selected_metrics else None
+        chosen_name = selected_metrics[0].name if selected_metrics else metrics[0].name
+        if judge_result and judge_result.best_candidate in metric_by_name:
+            chosen_name = judge_result.best_candidate
+
+        chosen_outline = outline_by_name.get(chosen_name, selected_candidates[0])
+        logger.info(
+            "PM 候选大纲选择完成: selected=%s chosen=%s llm_judge=%s",
+            [metric.name for metric in selected_metrics],
+            chosen_name,
+            bool(judge_result),
+        )
+        return chosen_outline, selected_candidates, selected_metrics, judge_result
+
     def generate_outline_once(
         self,
         topic: str,
@@ -70,11 +131,14 @@ class ProductManager:
             "请以 JSON 格式返回，字段值中不得使用双引号，用单引号或中文引号代替。"
         )
 
+        user_prompt = self._outline_user_prompt(topic, retry_note)
         with timed_block(logger, f"PM LLM 规划大纲 attempt={attempt}", slow_after=8.0):
-            response = self.llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=self._outline_user_prompt(topic, retry_note))
-            ])
+            with tracked_call(logger, f"PM LLM 规划大纲 attempt={attempt}", [system_prompt, user_prompt]) as record:
+                response = self.llm.invoke([
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt)
+                ])
+                record["output_payload"] = response.content
         with timed_block(logger, "解析 PM JSON 输出", slow_after=1.0):
             return parse_llm_json(response.content, ContentOutline)
 
@@ -105,6 +169,40 @@ def pm_node(state):
     logger.info("进入 PM 节点: topic=%s", state["topic"])
     with timed_block(logger, "PM 节点总耗时", slow_after=10.0):
         pm = ProductManager()
-        outline = pm.plan_content(state["topic"])
-    logger.info("PM 节点完成: title=%s sections=%d", outline.title, len(outline.sections))
-    return {"outline": outline, "history": [f"PM 规划了大纲：{outline.title}"]}
+        samples = _env_int("PM_OUTLINE_SAMPLES", DEFAULT_OUTLINE_CANDIDATE_SAMPLES)
+        top_n = _env_int("PM_OUTLINE_TOP_N", DEFAULT_OUTLINE_TOP_N)
+        llm_judge = _env_bool("PM_OUTLINE_LLM_JUDGE", True)
+        if samples <= 1:
+            outline = pm.plan_content(state["topic"])
+            candidates = [outline]
+            metrics = [evaluate_outline_quality(outline, name="sample_1")]
+            judge_result = None
+        else:
+            outline, candidates, metrics, judge_result = pm.plan_outline_candidates(
+                state["topic"],
+                samples=samples,
+                top_n=top_n,
+                llm_judge=llm_judge,
+            )
+    logger.info("PM 节点完成: title=%s sections=%d candidates=%d", outline.title, len(outline.sections), len(candidates))
+    return {
+        "outline": outline,
+        "outline_candidates": candidates,
+        "outline_candidate_metrics": [metric.to_dict() for metric in metrics],
+        "outline_judge": judge_result.model_dump() if judge_result else None,
+        "history": [f"PM 规划了大纲：{outline.title}"],
+    }
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() not in {"0", "false", "no", "off"}

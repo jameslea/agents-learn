@@ -16,6 +16,48 @@ ACTION_KEYWORDS = ("实施", "路径", "建议", "策略", "路线图", "展望"
 INDUSTRY_ONLY_KEYWORDS = ("制造", "金融", "医疗", "零售", "物流", "供应链", "教育", "能源", "政务", "人力资源")
 
 BROAD_CASE_HINTS = ("应用案例", "业务案例", "行业案例", "企业应用", "实际应用")
+CASE_TASK_KEYWORDS = (
+    "客服",
+    "客户服务",
+    "退款",
+    "投诉",
+    "供应链",
+    "库存",
+    "预测",
+    "调度",
+    "维护",
+    "合规",
+    "审核",
+    "风控",
+    "反欺诈",
+    "理赔",
+    "文档",
+    "知识",
+    "检索",
+    "合同",
+    "研发",
+    "文献",
+    "药物",
+    "流程",
+    "办公",
+    "全渠道",
+    "需求",
+    "配送",
+    "生产",
+    "运营",
+)
+CASE_SPECIFICITY_HINTS = ("如", "例如", "某", "平台", "工厂", "银行", "律所", "医院", "电商", "汽车")
+DECISION_VALUE_KEYWORDS = (
+    "ROI",
+    "投资回报",
+    "隐藏成本",
+    "成本权衡",
+    "价值量化",
+    "价值模型",
+    "量化框架",
+    "ROI测算",
+    "效果归因",
+)
 
 
 @dataclass
@@ -29,6 +71,10 @@ class OutlineQualityMetrics:
     key_point_count: int
     role_coverage: dict[str, bool]
     case_sections: int
+    specific_case_sections: int
+    generic_case_sections: int
+    case_specificity_ratio: float
+    decision_value_sections: int
     broad_case_sections: int
     industry_listing_sections: int
     narrative_order_score: int
@@ -53,6 +99,10 @@ def evaluate_outline_quality(outline: ContentOutline, name: str = "") -> Outline
         key_point_count=len(outline.key_points),
         role_coverage=role_coverage,
         case_sections=_case_section_count(outline.sections),
+        specific_case_sections=_specific_case_section_count(outline.sections),
+        generic_case_sections=_generic_case_section_count(outline.sections),
+        case_specificity_ratio=_case_specificity_ratio(outline.sections),
+        decision_value_sections=_count_sections(outline.sections, DECISION_VALUE_KEYWORDS),
         broad_case_sections=_broad_case_section_count(outline.sections),
         industry_listing_sections=_count_sections(outline.sections, INDUSTRY_ONLY_KEYWORDS),
         narrative_order_score=_narrative_order_score(outline.sections),
@@ -138,6 +188,38 @@ def _broad_case_section_count(sections: list[str]) -> int:
     return sum(1 for section in sections if any(hint in section for hint in BROAD_CASE_HINTS))
 
 
+def _specific_case_section_count(sections: list[str]) -> int:
+    return sum(1 for section in sections if _is_specific_case_section(section))
+
+
+def _generic_case_section_count(sections: list[str]) -> int:
+    return sum(1 for section in sections if _is_case_section(section) and not _is_specific_case_section(section))
+
+
+def _case_specificity_ratio(sections: list[str]) -> float:
+    case_sections = _case_section_count(sections)
+    if not case_sections:
+        return 0.0
+    return round(_specific_case_section_count(sections) / case_sections, 2)
+
+
+def _is_specific_case_section(section: str) -> bool:
+    """判断案例章是否具备行业、任务动作和示例线索，避免只奖励泛行业标题。"""
+    if not _is_case_section(section):
+        return False
+
+    signals = 0
+    if any(keyword in section for keyword in INDUSTRY_ONLY_KEYWORDS):
+        signals += 1
+    if any(keyword in section for keyword in CASE_TASK_KEYWORDS):
+        signals += 1
+    if any(keyword in section for keyword in CASE_SPECIFICITY_HINTS) or "（" in section or "(" in section:
+        signals += 1
+    if len(section) >= 18:
+        signals += 1
+    return signals >= 2
+
+
 def _first_index(
     sections: list[str],
     keywords: tuple[str, ...],
@@ -199,6 +281,12 @@ def _total_score(metrics: OutlineQualityMetrics) -> int:
     score += metrics.narrative_order_score
     score += metrics.searchability_score
     score += min(12, metrics.case_sections * 4)
+    score += min(6, metrics.specific_case_sections * 2)
+    if metrics.case_sections >= 2 and metrics.generic_case_sections == 0:
+        score += 3
+    if metrics.decision_value_sections:
+        score += min(4, metrics.decision_value_sections * 2)
+    score -= metrics.generic_case_sections * 6
     score -= metrics.broad_case_sections * 6
     if _is_industry_listing_without_synthesis(metrics):
         score -= 12
@@ -234,6 +322,12 @@ def _strengths(metrics: OutlineQualityMetrics) -> list[str]:
         strengths.append("章节标题具备较好的独立检索性")
     if metrics.case_sections >= 3:
         strengths.append("案例章节数量足以支撑多场景分析")
+    if metrics.specific_case_sections >= 2:
+        strengths.append("案例标题具备较好的行业、任务或场景具体性")
+    if metrics.case_sections >= 2 and metrics.generic_case_sections == 0:
+        strengths.append("所有案例章节都具备具体场景线索")
+    if metrics.decision_value_sections:
+        strengths.append("包含 ROI、投资回报或成本权衡等决策价值章节")
     return strengths
 
 
@@ -261,6 +355,8 @@ def _issues(metrics: OutlineQualityMetrics) -> list[str]:
 
     if metrics.broad_case_sections:
         issues.append(f"存在 {metrics.broad_case_sections} 个过宽案例章节，后续搜索容易发散。")
+    if metrics.generic_case_sections:
+        issues.append(f"存在 {metrics.generic_case_sections} 个案例章节偏泛，建议补充具体行业、任务动作或可检索场景。")
     if _is_industry_listing_without_synthesis(metrics):
         issues.append("行业枚举较多但缺少横向比较、模式归纳或评估框架。")
     if metrics.narrative_order_score < 14:

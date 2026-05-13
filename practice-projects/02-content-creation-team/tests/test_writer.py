@@ -7,7 +7,14 @@ from unittest.mock import Mock, patch
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_DIR))
 
-from crew.writer import build_quality_repair_feedback, build_writer_editorial_contract, format_case_candidates, writer_node  # noqa: E402
+from crew.writer import (  # noqa: E402
+    build_evidence_adjusted_outline,
+    build_quality_repair_feedback,
+    build_writer_editorial_contract,
+    downgrade_case_section_title,
+    format_case_candidates,
+    writer_node,
+)
 from sop_artifacts import (  # noqa: E402
     CaseCandidate,
     ContentOutline,
@@ -82,6 +89,108 @@ def base_state() -> dict:
 
 
 class WriterNodeTests(unittest.TestCase):
+    def test_downgrade_case_section_title_removes_case_claim(self):
+        adjusted = downgrade_case_section_title("案例二：客服Agent 进阶")
+
+        self.assertEqual(adjusted, "证据边界与趋势观察：客服Agent 进阶")
+
+    def test_evidence_adjusted_outline_downgrades_unwritable_case_sections(self):
+        outline = ContentOutline(
+            title="2026 年 AI Agent 在企业数字转型中的实际应用案例与实施框架",
+            target_audience="企业管理者",
+            sections=[
+                "问题定义：AI Agent 在数字转型中的角色",
+                "案例一：供应链智能调度",
+                "案例二：客服Agent 进阶",
+                "横向比较：不同行业场景下Agent模式",
+            ],
+            key_points=["案例", "证据", "路径"],
+        )
+        research = ResearchReport(
+            materials=[
+                ResearchMaterial(
+                    section_name="案例一：供应链智能调度",
+                    raw_data="匿名综合案例，缺少企业名（来源1）。",
+                    sources=["https://example.com/vendor"],
+                    case_candidates=[
+                        CaseCandidate(
+                            name="未命名",
+                            scenario="供应链调度",
+                            evidence="厂商白皮书综合案例，企业名称不可核验",
+                            source_url="https://example.com/vendor",
+                            source_tier="tier_3",
+                            verification_status="anonymous",
+                            is_writable_case=False,
+                        )
+                    ],
+                ),
+                ResearchMaterial(
+                    section_name="案例二：客服Agent 进阶",
+                    raw_data="未找到直接匹配的公开案例（来源1）。",
+                    sources=["https://example.com/trend"],
+                ),
+                ResearchMaterial(
+                    section_name="横向比较：不同行业场景下Agent模式",
+                    raw_data="横向比较材料（来源1）。",
+                    sources=["https://example.com/compare"],
+                ),
+            ]
+        )
+
+        adjusted, aliases = build_evidence_adjusted_outline(outline, research)
+
+        self.assertIn("应用场景与证据边界", adjusted.title)
+        self.assertNotIn("实际应用案例", adjusted.title)
+        self.assertEqual(
+            adjusted.sections,
+            [
+                "问题定义：AI Agent 在数字转型中的角色",
+                "证据边界与趋势观察：供应链智能调度",
+                "证据边界与趋势观察：客服Agent 进阶",
+                "横向比较：不同行业场景下Agent模式",
+            ],
+        )
+        self.assertEqual(
+            aliases,
+            {
+                "案例一：供应链智能调度": "证据边界与趋势观察：供应链智能调度",
+                "案例二：客服Agent 进阶": "证据边界与趋势观察：客服Agent 进阶",
+            },
+        )
+
+    def test_evidence_adjusted_outline_keeps_writable_case_sections(self):
+        outline = ContentOutline(
+            title="AI Agent 应用案例报告",
+            target_audience="企业管理者",
+            sections=["案例一：金融合规Agent"],
+            key_points=["案例"],
+        )
+        research = ResearchReport(
+            materials=[
+                ResearchMaterial(
+                    section_name="案例一：金融合规Agent",
+                    raw_data="公开企业案例（来源1）。",
+                    sources=["https://example.com/verified"],
+                    case_candidates=[
+                        CaseCandidate(
+                            name="公开企业",
+                            scenario="金融合规审核",
+                            evidence="企业公开披露项目背景和效果边界",
+                            source_url="https://example.com/verified",
+                            source_tier="tier_1",
+                            verification_status="verified",
+                            is_writable_case=True,
+                        )
+                    ],
+                )
+            ]
+        )
+
+        adjusted, aliases = build_evidence_adjusted_outline(outline, research)
+
+        self.assertEqual(adjusted, outline)
+        self.assertEqual(aliases, {})
+
     def test_writer_editorial_contract_sets_stable_density_targets(self):
         outline = ContentOutline(
             title="测试报告",

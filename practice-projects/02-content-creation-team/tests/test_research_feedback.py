@@ -9,7 +9,10 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from crew.researcher import (  # noqa: E402
     Researcher,
+    build_section_search_query,
     build_research_feedback_context,
+    classify_research_section,
+    clean_section_for_search,
     material_quality_issues,
     merge_research_materials,
     normalize_source_numbers,
@@ -21,6 +24,75 @@ from sop_artifacts import CaseCandidate, ContentOutline, ResearchMaterial, Resea
 
 
 class ResearchFeedbackTests(unittest.TestCase):
+    def test_clean_section_for_search_removes_outline_role_noise(self):
+        cleaned = clean_section_for_search("案例二：客服Agent 进阶：金融服务自动理赔")
+
+        self.assertEqual(cleaned, "客服Agent 进阶 金融服务自动理赔")
+
+    def test_classify_comparison_section_before_case_keywords(self):
+        section_type = classify_research_section("横向比较：不同行业场景下Agent模式")
+
+        self.assertEqual(section_type, "comparison")
+
+    def test_case_search_query_uses_case_terms_without_pdf_only_constraint(self):
+        outline = ContentOutline(
+            title="2026 年 AI Agent 在企业数字转型中的应用场景与证据边界",
+            target_audience="管理者",
+            sections=["案例一：供应链智能调度Agent"],
+            key_points=["案例", "证据"],
+        )
+
+        query, section_type, cleaned = build_section_search_query(
+            outline,
+            "案例一：供应链智能调度Agent",
+            [],
+        )
+
+        self.assertEqual(section_type, "case")
+        self.assertEqual(cleaned, "供应链智能调度Agent")
+        self.assertIn("case study", query)
+        self.assertIn("press release", query)
+        self.assertNotIn("filetype:pdf", query)
+        self.assertNotIn("技术报告", query)
+
+    def test_technology_search_query_uses_technical_terms(self):
+        outline = ContentOutline(
+            title="2026 年 AI Agent 在企业数字转型中的应用场景与证据边界",
+            target_audience="管理者",
+            sections=["技术基础：Agent 架构与工具调用能力"],
+            key_points=["技术", "证据"],
+        )
+
+        query, section_type, cleaned = build_section_search_query(
+            outline,
+            "技术基础：Agent 架构与工具调用能力",
+            [],
+        )
+
+        self.assertEqual(section_type, "technology")
+        self.assertEqual(cleaned, "Agent 架构与工具调用能力")
+        self.assertIn("technical report", query)
+        self.assertIn("filetype:pdf", query)
+        self.assertNotIn("case study", query)
+
+    def test_feedback_search_query_keeps_focused_feedback_terms(self):
+        outline = ContentOutline(
+            title="测试报告",
+            target_audience="管理者",
+            sections=["案例一：金融合规Agent"],
+            key_points=["案例"],
+        )
+
+        query, section_type, _cleaned = build_section_search_query(
+            outline,
+            "案例一：金融合规Agent",
+            ["缺少公开企业名称和独立验证来源。"],
+        )
+
+        self.assertEqual(section_type, "case")
+        self.assertIn("缺少公开企业名称和独立验证来源", query)
+        self.assertIn("annual report", query)
+
     def test_splits_section_and_global_feedback(self):
         feedback = ReviewFeedback(
             is_approved=False,
@@ -316,6 +388,27 @@ class ResearchFeedbackTests(unittest.TestCase):
 
         self.assertIn("source_quality_hint", prompt)
         self.assertIn("优先从 tier_1/tier_2 中提炼核心事实", prompt)
+
+    def test_search_section_invokes_tavily_each_time(self):
+        researcher = Researcher.__new__(Researcher)
+        researcher.search_tool = Mock()
+        researcher.search_tool.invoke.return_value = {
+            "results": [
+                {"url": "https://mckinsey.com/report.pdf", "content": "案例资料"}
+            ]
+        }
+        outline = ContentOutline(
+            title="测试报告",
+            target_audience="管理者",
+            sections=["案例"],
+            key_points=["事实"],
+        )
+
+        first = researcher._search_section(outline, "案例", [])
+        second = researcher._search_section(outline, "案例", [])
+
+        self.assertEqual(researcher.search_tool.invoke.call_count, 2)
+        self.assertEqual(first["results"][0]["url"], second["results"][0]["url"])
 
 
 if __name__ == "__main__":

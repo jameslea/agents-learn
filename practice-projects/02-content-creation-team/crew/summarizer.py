@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from utils.cost_utils import tracked_call
 from utils.logging_utils import get_logger, timed_block
 
 load_dotenv()
@@ -34,10 +35,12 @@ class Summarizer:
         )
 
         with timed_block(logger, "Summarizer LLM 压缩历史", slow_after=8.0):
-            response = self.llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ])
+            with tracked_call(logger, "Summarizer LLM 压缩历史", [system_prompt, user_prompt]) as record:
+                response = self.llm.invoke([
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt)
+                ])
+                record["output_payload"] = response.content
         return response.content
 
 def summarizer_node(state):

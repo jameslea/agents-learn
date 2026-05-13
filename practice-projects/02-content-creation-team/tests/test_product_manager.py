@@ -9,6 +9,25 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from crew.product_manager import ProductManager, validate_outline  # noqa: E402
 from sop_artifacts import ContentOutline  # noqa: E402
+from utils.outline_selection import OutlineJudgeRankingItem, OutlineJudgeResult  # noqa: E402
+
+
+class FakeJudge:
+    def judge(self, topic, metrics):
+        return OutlineJudgeResult(
+            ranking=[
+                OutlineJudgeRankingItem(
+                    candidate="sample_2",
+                    rank=1,
+                    editorial_score=93,
+                    strengths=["更适合写作"],
+                    risks=[],
+                    recommendation="推荐",
+                )
+            ],
+            best_candidate="sample_2",
+            selection_reason="最后一个候选更好。",
+        )
 
 
 class ProductManagerTests(unittest.TestCase):
@@ -126,6 +145,63 @@ class ProductManagerTests(unittest.TestCase):
 
         self.assertEqual(len(outline.sections), 9)
         self.assertEqual(chat_openai.return_value.invoke.call_count, 2)
+
+    def test_plan_outline_candidates_returns_llm_judge_default_choice(self):
+        first_response = Mock()
+        first_response.content = """
+        {
+          "title": "候选一",
+          "target_audience": "管理者",
+          "sections": [
+            "背景与问题定义",
+            "技术基础与能力边界",
+            "案例一：智能客服Agent在零售行业的应用",
+            "案例二：供应链Agent在制造业的库存优化",
+            "案例三：金融合规Agent在银行业的动态风控",
+            "横向比较与价值模式归纳",
+            "风险挑战与治理边界",
+            "实施路径与行动建议"
+          ],
+          "key_points": ["价值", "风险", "路径"]
+        }
+        """
+        second_response = Mock()
+        second_response.content = """
+        {
+          "title": "候选二",
+          "target_audience": "管理者",
+          "sections": [
+            "背景与问题定义",
+            "技术基础与能力边界",
+            "案例一：智能客服Agent在零售行业的应用",
+            "案例二：供应链Agent在制造业的库存优化",
+            "案例三：金融合规Agent在银行业的动态风控",
+            "横向比较与价值模式归纳",
+            "价值量化框架：投资回报与隐藏成本",
+            "风险挑战与治理边界",
+            "实施路径与行动建议"
+          ],
+          "key_points": ["价值", "风险", "路径"]
+        }
+        """
+
+        with patch("crew.product_manager.ChatOpenAI") as chat_openai, patch(
+            "crew.product_manager.judge_outline_candidates",
+            side_effect=lambda topic, metrics: FakeJudge().judge(topic, metrics),
+        ):
+            chat_openai.return_value.invoke.side_effect = [first_response, second_response]
+            pm = ProductManager()
+            outline, candidates, metrics, judge = pm.plan_outline_candidates(
+                "测试主题",
+                samples=2,
+                top_n=2,
+                llm_judge=True,
+            )
+
+        self.assertEqual(outline.title, "候选二")
+        self.assertEqual(len(candidates), 2)
+        self.assertEqual(len(metrics), 2)
+        self.assertEqual(judge.best_candidate, "sample_2")
 
 
 if __name__ == "__main__":

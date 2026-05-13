@@ -59,11 +59,13 @@
 | 阶段 0：固定稳定基线 | 已完成 | 保存当前已验证有效版本 | 单元测试通过，工作区干净 | 已提交 `ccb1f24` |
 | 阶段 1：建立报告质量评估工具 | 已完成 | 建立可重复的报告质量判断标准 | 历史样本对比，确认 `094340 > 113714` | 已提交 `4526fc4` |
 | 阶段 2：提高 PM 大纲质量 | 已完成 | 提升大纲的主编式规划能力 | PM-only 多次大纲生成与评分 | 已提交 `37e811d` |
+| 阶段 2.5：多候选大纲与人工选择 | 进行中 | 通过多样本生成、自动评分和人工选择进一步提高大纲质量 | 生成 5 个候选，排序保留 Top 3，人工选择后进入 Researcher | 先独立工具，验证有效后再接入主流程 |
 | 阶段 3：降低 Writer 输出随机波动 | 已完成 | 稳定编辑节奏、格式变化和小节厚度 | 新报告阅读感受不低于 `094340` | 已提交 `e6123eb` |
 | 阶段 4：将门禁原则前移到角色提示词 | 需重新评估 | 从源头减少门禁触发 | `review_count` 不再被结构问题消耗 | 实验不提交 |
 | 阶段 5：来源质量专项优化 | 进行中 | 降低弱来源支撑核心结论的问题 | 高质量来源占比提升，弱来源拒绝减少 | 有效后单独提交 |
 | 阶段 6：有效修改提交保存 | 待开始 | 建立可回滚检查点 | 测试通过且真实生成不退化 | 每阶段独立提交 |
-| 阶段 7：Token 成本与缓存机制优化 | 待开始 | 降低重复搜索、提炼、评审成本 | 节点调用和字符量可观测，重复运行成本下降 | 有效后单独提交 |
+| 阶段 7：Token 成本与缓存机制优化 | 进行中（Tavily 缓存已放弃） | 降低重复搜索、提炼、评审成本 | 节点调用和字符量可观测，不再追踪 Tavily 缓存收益 | 有效后单独提交 |
+| 阶段 8：跨章节研究计划 | 待开始 | 让 Researcher 先采集证据、再基于章节依赖归纳材料 | 独立设计文档、单元测试、真实报告对比 | 单独设计、单独提交 |
 
 ## 阶段任务
 
@@ -149,6 +151,63 @@
 - 结论：首轮大纲质量已经稳定在较高区间，当前不宜大幅增加 PM prompt 约束；阶段 2C 暂以小幅校准和观察为主，避免为了优化指标破坏 LLM 的主编式判断。
 - 提交策略：本阶段保存大纲评估与 PM-only 采样能力；PM prompt 不做大幅修改，后续如真实报告质量仍受大纲影响，再基于评估工具单独开小改动。
 
+### [~] 阶段 2.5：多候选大纲与人工选择
+
+目标：利用已有大纲评估工具，让 PM 生成多个候选大纲，自动评分排序后保留 Top 3，由用户选择最终进入 Researcher 的大纲。
+
+任务：
+- **2.5A：独立工具验证**。先扩展 `evaluate_outlines.py`，支持生成 5 个候选大纲、运行确定性评分、排序输出 Top 3。
+- **2.5B：LLM 主编评审**。在本地 Top N 筛选后，可选调用 LLM 进行主编视角评估，判断哪个大纲更适合进入调研和写作。
+- **2.5C：人工选择接入**。在独立工具和 LLM 评审验证有效后，再接入 `supervisor_graph.py` 的 Researcher 前人工断点，展示 Top 3 并允许用户选择。
+- 输出每个候选的总分、章节数量、案例章节数量、具体案例章节数量、主要优点、主要问题和完整章节列表；章节必须按编号列表展示，避免挤在一行难以阅读。
+- 用户未选择时默认使用评分最高的大纲，避免阻塞自动运行。
+- LLM 评审只做排序、评分和理由说明，不改写大纲；本地确定性评估仍作为基础过滤和硬约束。
+
+完成标准：
+- 独立工具能稳定生成多个大纲候选，并按评分输出 Top 3。
+- 可选 LLM 主编评审能解释 Top 3 的叙事质量、案例可调研性、证据风险和推荐理由。
+- Top 3 的人工阅读质量整体优于单次 PM 输出，尤其是章节角色、案例覆盖、后半段结构和证据可检索性。
+- 主流程接入后，人工断点能清晰展示候选差异，并能把用户选择的大纲写入后续 Researcher 流程。
+- 不破坏现有 PM-only 评估脚本和单元测试。
+
+当前进展：
+- 已扩展 `evaluate_outlines.py`，新增 `--select-top N` 参数，可对多次 PM-only 大纲采样进行确定性排序并输出 Top N。
+- 排序优先级为总分、泛案例章节数量少、具体案例比例、决策价值章节数量、具体案例章节数量、叙事顺序、检索性和案例章节数量，并惩罚过宽案例章节和行业枚举。
+- 文本输出新增候选总分、章节数、案例章节数、具体案例章数量、泛案例章数量、具体案例比例、决策价值章节数量、主要优点、主要问题和完整章节列表；大纲章节已改为编号列表展示，并会清理 PM 输出中已有的 `1.` / `2、` 数字前缀，避免出现重复编号。
+- 已增加中间进度日志，生成每个候选、完成本地评分、完成 Top N 筛选和启动 LLM 主编评审时都会输出进度；进度写入 stderr，避免污染 `--json` 的 stdout。
+- JSON 输出在指定 `--select-top` 时只输出筛选后的候选，便于后续脚本或主流程复用。
+- 已新增 `--llm-judge` 参数，可对当前展示候选调用 LLM 主编评审，并输出 LLM 排名、主编分、优势、风险和最终推荐。
+- LLM 评审 prompt 明确要求不改写大纲，只围绕叙事线、案例可核验性、3000 字报告承载力、读者决策价值、失败教训和证据边界进行判断。
+- 已根据真实运行结果校准本地评估器：新增 `specific_case_sections`、`generic_case_sections`、`case_specificity_ratio` 与 `decision_value_sections` 软指标；加重泛案例章节扣分，所有案例均具体时给予额外奖励，并奖励 ROI、投资回报、隐藏成本、价值量化等面向高管决策的章节。
+- 已抽出 `utils/outline_selection.py`，让独立脚本和主流程共用 Top N 排序与 LLM 主编评审逻辑，避免 `product_manager.py` 反向依赖 CLI 脚本。
+- 已接入 `pm_node`：默认生成 5 个候选大纲、本地排序保留 Top 3、可选调用 LLM 主编评审，并把默认选择的大纲写入 `outline`；候选和评审结果写入 `outline_candidates`、`outline_candidate_metrics`、`outline_judge`。
+- 已接入 `supervisor_graph.py` 的 Researcher 前人工断点：展示 Top 3、LLM 推荐理由和编号列表；用户可输入 1-3 覆盖默认选择，直接回车则沿用 LLM 或本地默认大纲。
+- 主流程参数可通过环境变量调整：`PM_OUTLINE_SAMPLES`、`PM_OUTLINE_TOP_N`、`PM_OUTLINE_LLM_JUDGE`。
+- 已新增单元测试覆盖 Top N 排序与截断逻辑、LLM 评审 prompt 约束、fake judge 注入路径、具体案例章节识别、多行章节展示、中间进度日志、PM 候选默认选择和主流程人工选择辅助函数。
+
+验证记录：
+- 真实大纲评估：本地 Top 3 为 `sample_1=99`、`sample_3=96`、`sample_2=95`；LLM 主编评审推荐 `sample_3`。
+- 结论：LLM 主编评审能补充本地评分对案例具体性、可调研性和写作承载力的判断盲区；本地评估器已吸收该结论，增加案例具体性软指标。
+- 二次校准样本：本地评分中 `sample_5=100`、`sample_1=100`，LLM 推荐 `sample_1`；结论是“无泛案例”和“具体案例比例”应优先于单纯章节更完整，已调整排序 key 和泛案例惩罚。
+- 三次校准样本：本地评分中 `sample_2=100`、`sample_3=100`，LLM 推荐 `sample_3`；结论是“价值量化框架/投资回报/隐藏成本”等决策价值章节应成为同分排序信号，已增加 `decision_value_sections`。
+- 主流程接入验证：新增 PM 候选生成和断点选择单元测试；真实完整报告已运行，但 `reports/rejected_report_20260513_184444.md` 未通过评审。
+- 真实运行结论：多候选大纲与 LLM 主编评审能选出更好的报告骨架，但不能保证 Researcher 找到公开可核验案例；当研究阶段只找到匿名、厂商白皮书或趋势材料时，后续流程必须按证据强度自动降级案例章。
+- 大纲专项测试：`python3 -m unittest practice-projects/02-content-creation-team/tests/test_outline_evaluation.py`
+- 结果：`Ran 15 tests ... OK`
+- 全量测试：`python3 -m unittest discover practice-projects/02-content-creation-team/tests`
+- 结果：`Ran 80 tests ... OK`
+
+使用示例：
+- 只做本地排序：`python3 evaluate_outlines.py --samples 5 --select-top 3`
+- 本地排序后增加 LLM 主编评审：`python3 evaluate_outlines.py --samples 5 --select-top 3 --llm-judge`
+- JSON 输出：`python3 evaluate_outlines.py --samples 5 --select-top 3 --llm-judge --json`
+- 主流程默认候选数：`PM_OUTLINE_SAMPLES=5 PM_OUTLINE_TOP_N=3 PM_OUTLINE_LLM_JUDGE=1 python3 supervisor_graph.py`
+
+提交策略：
+- 先提交独立工具：`feat(content-team): rank multiple outline candidates`
+- 再提交 LLM 主编评审：`feat(content-team): add outline editorial judge`
+- 验证有效后再提交主流程接入：`feat(content-team): add human outline selection`
+
 ### [x] 阶段 3：降低 Writer 输出随机波动
 
 目标：在 PM 大纲更稳定之后，再稳定报告的编辑节奏和格式丰富度。
@@ -229,6 +288,19 @@
 - 阶段 5.1 针对 `rejected_report_20260513_153805.md` 的“结构过碎”问题，收窄 Writer 结构目标为 15-19 个有效三级小节、28-40 条列表项，并在评估器中增加“列表超过 50 条”的碎片化提示；该提示暂不作为硬门禁。
 - 阶段 5.2 根据多次真实运行观察，将目标从“减少评审次数”调整为“提升多轮迭代收益”：Reviewer 通过后会进行一次确定性高质量评估；若报告只是基本通过但内容偏薄、案例节奏不足或结构碎片化，且尚未达到最大评审次数，则触发 1 次 Writer 质量增强轮。
 - 阶段 5.3 针对 `rejected_report_20260513_162449.md` 的“全是综合案例无法核验”问题，新增 `case_candidates` 结构化案例候选；Researcher 需标记企业/机构名称、场景、证据、来源、验证状态和是否可写成具体案例。Writer 只能把 `is_writable_case=true` 的候选写成具体案例，否则必须降级为趋势观察、场景模式或证据缺口。
+- 阶段 5.4 针对 `rejected_report_20260513_184444.md` 的“主标题仍以案例形式呈现但证据链不足”问题，Writer 在生成 prompt 前会根据 Researcher 的 `case_candidates` 自动调整大纲：没有 `is_writable_case=true` 候选的案例章改名为“证据边界与趋势观察”，当多个案例章被降级时，报告标题中的“实际应用案例/应用案例”同步降级为“应用场景与证据边界”。研究素材上下文会保留原始大纲章节名，方便 Writer 知道这是证据不足后的降级，而不是新造章节。
+- 阶段 5.5 针对搜索召回质量问题，新增确定性搜索词规划层：Researcher 不再把“报告标题 + 原始大纲章节 + 固定补词”直接交给 Tavily，而是先清洗章节编号、角色前缀和泛化词，再按章节类型生成不同搜索补词。案例章优先搜索公开企业、官方案例、customer story、press release 和 annual report；技术、横向比较、风险、实施路径、证据边界章节分别使用 technical report、benchmark、risk governance、implementation guide、verification 等更匹配的关键词。`filetype:pdf` 只保留在技术、横向比较和通用报告类搜索中，避免案例章漏掉公司官方网页。
+
+最新失败样本分析：
+- `reports/rejected_report_20260513_184444.md` 的失败核心不是大纲排序，而是证据回流不足：Researcher 已经识别多个章节缺少可写案例，但 Writer 仍沿用 PM 大纲中的“案例一/案例二/案例三/案例四”主章节标题。
+- Reviewer 的拒绝是合理的：如果公开证据只支持趋势观察、厂商主张或综合案例，报告不能继续把这些章节包装成“实际应用案例”。
+- 后续评估重点应放在“证据感知大纲降级是否能减少虚构案例拒绝”，而不是继续提高 Tavily 缓存或单纯提高大纲本地评分。
+
+验证记录：
+- Writer 专项测试：`python3 -m unittest practice-projects/02-content-creation-team/tests/test_writer.py`
+- 结果：`Ran 8 tests ... OK`
+- 全量测试：`python3 -m unittest discover practice-projects/02-content-creation-team/tests`
+- 结果：`Ran 85 tests ... OK`
 
 ### [ ] 阶段 6：有效修改提交保存
 
@@ -247,9 +319,9 @@
 - `tune(content-team): shift quality guidance upstream`
 - `tune(content-team): improve research source quality`
 
-### [ ] 阶段 7：Token 成本与缓存机制优化
+### [~] 阶段 7：Token 成本与缓存机制优化
 
-目标：降低搜索、写作、评审和返工带来的重复 token 消耗，并提高可复用中间产物的命中率。
+目标：降低搜索、写作、评审和返工带来的重复 token 消耗；本阶段以成本观测为主，不再继续投入 Tavily 搜索结果缓存。
 
 当前问题：
 - Researcher 每次按章节重新搜索和提炼，Tavily 结果与 LLM 提炼结果没有持久缓存。
@@ -265,7 +337,7 @@
 - 对比一次完整运行中 PM、Researcher、Writer、Reviewer 的成本占比。
 
 缓存设计候选：
-- **搜索结果缓存**：以搜索 query 的规范化文本为 key，缓存 Tavily 返回结果，设置 TTL 或手动失效。
+- **搜索结果缓存**：已评估并放弃，后续不再关注。完整 query 缓存命中率过低；语义桶缓存容易污染资料召回，会反向伤害来源质量专项优化，不适合当前学习项目。
 - **研究素材缓存**：以 `topic + section + search_result_hash + feedback_hash` 为 key，缓存 `ResearchMaterial`。
 - **来源排序缓存**：以 `ResearchReport` 的 sources hash 为 key，缓存 ranked source records。
 - **报告评估缓存**：确定性评估不需要 LLM，可直接复用本地计算，不进入模型调用。
@@ -275,9 +347,15 @@
 
 完成标准：
 - 增加成本观测日志，能输出每个节点的调用次数和字符量。
-- 至少实现 Tavily 搜索结果缓存或 ResearchMaterial 缓存中的一种。
+- 当前阶段先不实现缓存，保留成本观测和独立日志；后续只考虑 URL 证据缓存、来源质量分类缓存或案例候选缓存这类低污染风险方案。
 - 不降低报告质量，不引入过期资料误用。
-- 同一主题重复运行时，搜索或研究提炼成本有可观下降。
+- 同一主题重复运行时，可以通过日志分析主要成本来源，为后续缓存策略提供依据。
+
+当前进展：
+- 已新增 `utils/cost_utils.py`，在 PM、Researcher、Writer、Reviewer、Summarizer 的 LLM 调用处记录输入字符、输出字符、耗时和缓存命中状态。
+- 已尝试 Tavily 搜索缓存，但因 PM 大纲动态生成导致精确 query 命中率低；语义稳定 key 又会带来搜索结果污染风险，已按学习项目“保持简单”的原则撤回。该方向收益不足，后续不再作为优化任务。
+- 已新增 `.gitignore` 忽略 `logs/`，避免把运行日志提交到仓库。
+- 已支持独立文件日志：默认输出到 `logs/run_YYYYMMDD_HHMMSS.log`，可通过 `CONTENT_TEAM_LOG_DIR` 和 `CONTENT_TEAM_LOG_TO_FILE` 配置。
 
 风险与约束：
 - 缓存不能掩盖资料过期问题；涉及“2026 最新”等主题时需要可配置失效策略。
@@ -286,9 +364,33 @@
 
 建议提交粒度：
 - `chore(content-team): add agent cost instrumentation`
-- `perf(content-team): cache research search results`
 - `perf(content-team): cache extracted research materials`
 - `perf(content-team): compact writer evidence context`
+
+### [ ] 阶段 8：跨章节研究计划
+
+目标：修复 Researcher “逐章独立搜索和提炼”的结构性问题，让横向比较、证据边界、风险、实施路径等章节能够依赖前文证据，而不是把每个章节都当成独立搜索任务。
+
+当前判断：
+- 章节之间存在明确依赖，不能完全独立生成。
+- 具体案例、技术基础、市场数据等章节应优先承担原始证据采集。
+- 横向比较、证据边界、风险挑战、实施路径和结论展望应更多依赖前文材料，必要时才补充搜索。
+- 该改动会影响 Researcher 核心控制流，复杂度高，不能作为阶段 5 搜索关键词优化的附带改动。
+
+独立任务文档：
+- [RESEARCH_PLAN_TASKS.md](RESEARCH_PLAN_TASKS.md)
+
+建议方向：
+- 增加确定性的 `ResearchPlan`，把章节分为 `search_primary`、`hybrid`、`synthesis`。
+- 先执行原始证据采集章节，再构建 `EvidenceMap`。
+- 后续综合章节基于 `EvidenceMap` 和相关前文材料提炼，必要时补搜。
+- 控制 synthesis 章节的 Tavily 调用，避免为横向比较、实施路径和结论引入无关搜索结果。
+
+完成标准：
+- 单元测试覆盖章节研究模式分类、EvidenceMap 摘要、依赖章节 prompt 注入和 synthesis 搜索控制。
+- 真实报告中横向比较、证据边界和实施路径能承接前文案例与来源质量，而不是孤立摘要。
+- Reviewer 因“证据链断裂”“综合案例冒充实际案例”拒绝的频率下降。
+- Tavily 调用量不明显增加，最好减少 synthesis 章节搜索。
 
 ## 更新记录
 
@@ -300,3 +402,4 @@
 - 2026-05-13：阶段 2 拆分为独立大纲评估、PM-only LLM 采样评估和 PM prompt 优化。
 - 2026-05-13：阶段 3 开始，先增强 Writer 首轮编辑契约，不提高硬门禁阈值。
 - 2026-05-13：阶段 3 真实生成验证通过，报告结构质量接近 `094340`，未通过原因转向来源质量问题。
+- 2026-05-13：新增阶段 8 跨章节研究计划任务，单独记录 Researcher 章节依赖、EvidenceMap 和分阶段调研设计。

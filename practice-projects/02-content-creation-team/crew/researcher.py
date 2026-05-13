@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from sop_artifacts import CaseCandidate, ResearchMaterial, ResearchReport, ContentOutline, ReviewFeedback
+from utils.cost_utils import tracked_call
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
 from utils.quality import infer_source_tier, source_quality_summary, source_quality_warnings, validate_research_report
@@ -20,6 +21,65 @@ SEARCH_RESULT_LIMIT = 6
 SOURCE_TIER_RANK = {"tier_1": 0, "tier_2": 1, "tier_3": 2}
 CASE_SECTION_KEYWORDS = ("案例", "场景", "实践", "应用", "落地")
 CASE_EVIDENCE_FEEDBACK_KEYWORDS = ("案例", "综合案例", "无法核验", "企业名称", "真实企业", "厂商", "独立验证")
+SECTION_ROLE_PREFIXES = (
+    "问题定义",
+    "背景",
+    "引言",
+    "技术基础",
+    "能力边界",
+    "横向比较",
+    "横向对比",
+    "路径归纳",
+    "风险挑战",
+    "风险与挑战",
+    "证据边界",
+    "实施路径",
+    "实施建议",
+    "结论",
+    "未来展望",
+)
+USELESS_SEARCH_PHRASES = (
+    "章节",
+    "本章",
+    "分析",
+    "框架",
+    "路径",
+    "建议",
+    "价值",
+    "边界",
+    "挑战",
+    "问题",
+    "定义",
+    "当前",
+    "未来",
+)
+SECTION_TYPE_TERMS = {
+    "case": (
+        "真实企业 客户案例 官方案例 case study customer story implementation "
+        "press release annual report company deployment"
+    ),
+    "technology": (
+        "technical report architecture benchmark capability limitation "
+        "技术报告 架构 能力评估 白皮书"
+    ),
+    "risk": (
+        "risk governance compliance audit failure incident lessons learned "
+        "监管 合规 审计 失败教训"
+    ),
+    "implementation": (
+        "implementation guide deployment framework maturity model ROI best practices "
+        "实施指南 成熟度 投资回报 最佳实践"
+    ),
+    "comparison": (
+        "industry comparison benchmark adoption survey report market data "
+        "行业对比 调研报告 市场数据"
+    ),
+    "evidence": (
+        "evidence verification attribution methodology source credibility "
+        "证据 可验证性 归因 可信度"
+    ),
+    "general": "深度资料 行业数据 官方报告 研究报告 白皮书 权威来源",
+}
 
 
 def _shorten(text: str, limit: int = 160) -> str:
@@ -28,6 +88,67 @@ def _shorten(text: str, limit: int = 160) -> str:
     if len(text) <= limit:
         return text
     return text[:limit].rstrip() + "..."
+
+
+def clean_section_for_search(section: str) -> str:
+    """把大纲章节标题清洗成更适合搜索的业务关键词。"""
+    cleaned = re.sub(r"^\s*(?:\d+|[一二三四五六七八九十]+)[\.．、]\s*", "", section.strip())
+    cleaned = re.sub(r"^\s*(?:案例|场景)[一二三四五六七八九十\d]*[：:、\-\s]*", "", cleaned)
+
+    prefix_match = re.match(r"^\s*([^：:]{1,16})[：:]\s*(.+)$", cleaned)
+    if prefix_match:
+        prefix, rest = prefix_match.groups()
+        if any(role in prefix for role in SECTION_ROLE_PREFIXES):
+            cleaned = rest
+
+    cleaned = re.sub(r"[（）()\[\]【】]", " ", cleaned)
+    cleaned = re.sub(r"[——\-_/|,，；;：:、]+", " ", cleaned)
+    for phrase in USELESS_SEARCH_PHRASES:
+        cleaned = cleaned.replace(phrase, " ")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned or section.strip()
+
+
+def classify_research_section(section: str) -> str:
+    """按章节角色选择搜索补词，避免所有章节都强行搜索案例。"""
+    if any(keyword in section for keyword in ("证据", "可验证", "可信", "归因")):
+        return "evidence"
+    if any(keyword in section for keyword in ("横向", "比较", "对比", "异同", "模式归纳")):
+        return "comparison"
+    if re.search(r"^\s*(?:\d+|[一二三四五六七八九十]+)?[\.．、]?\s*(?:案例|场景)[一二三四五六七八九十\d]*[：:、\-\s]", section):
+        return "case"
+    if any(keyword in section for keyword in ("风险", "挑战", "治理", "合规", "安全", "失败")):
+        return "risk"
+    if any(keyword in section for keyword in ("实施", "路径", "建议", "部署", "ROI", "投资回报", "成熟度")):
+        return "implementation"
+    if any(keyword in section for keyword in ("技术", "架构", "能力", "模型", "工具调用")):
+        return "technology"
+    if any(keyword in section for keyword in CASE_SECTION_KEYWORDS):
+        return "case"
+    return "general"
+
+
+def build_section_search_query(
+    outline: ContentOutline,
+    section: str,
+    scoped_feedback: list[str],
+) -> tuple[str, str, str]:
+    """生成章节搜索词，返回 query、章节类型和清洗后的章节关键词。"""
+    section_type = classify_research_section(section)
+    cleaned_section = clean_section_for_search(section)
+    search_query = f"{outline.title} {cleaned_section} {SECTION_TYPE_TERMS[section_type]}"
+
+    if section_type in {"technology", "comparison", "general"}:
+        search_query += " filetype:pdf"
+
+    if scoped_feedback:
+        search_hint = " ".join(_shorten(item, 80) for item in scoped_feedback[:3])
+        search_query += (
+            f" {search_hint} 权威来源 可核验 企业名称 独立验证 "
+            "press release annual report"
+        )
+
+    return re.sub(r"\s+", " ", search_query).strip(), section_type, cleaned_section
 
 
 def build_research_feedback_context(
@@ -350,8 +471,15 @@ class Researcher:
             section,
             _shorten(search_query, 220),
         )
+        search_payload = {
+            "query": search_query,
+            "max_results": 8,
+            "tavily_topic": "general",
+        }
         with timed_block(logger, f"Tavily 搜索: {section}", slow_after=8.0):
-            search_results = self.search_tool.invoke({"query": search_query})
+            with tracked_call(logger, f"Tavily 搜索: {section}", search_payload) as record:
+                search_results = self.search_tool.invoke({"query": search_query})
+                record["output_payload"] = search_results
         return prioritize_search_results(search_results)
 
     def _build_search_query(
@@ -361,13 +489,19 @@ class Researcher:
         scoped_feedback: list[str],
     ) -> str:
         """构造 Tavily 搜索词，兼顾主题、章节和定向返工反馈。"""
-        search_query = (
-            f"{outline.title} {section} 深度资料 行业数据 实际案例 "
-            "真实企业 客户案例 官方案例 case study 官方报告 白皮书 研究报告 filetype:pdf"
+        search_query, section_type, cleaned_section = build_section_search_query(
+            outline,
+            section,
+            scoped_feedback,
+        )
+        logger.info(
+            "搜索词规划: section=%s type=%s cleaned=%s",
+            section,
+            section_type,
+            cleaned_section,
         )
         if scoped_feedback:
             search_hint = " ".join(_shorten(item, 80) for item in scoped_feedback[:3])
-            search_query += f" {search_hint} 权威来源 可核验案例 失败教训 企业名称 独立验证 press release annual report"
             print(f"  ↳ 针对评审问题补充搜索: {_shorten(search_hint)}")
             logger.info(
                 "章节调研带反馈: section=%s feedback_items=%d",
@@ -417,23 +551,26 @@ class Researcher:
         attempt: int,
     ) -> ResearchMaterial:
         """执行一次素材提炼调用，并解析为 ResearchMaterial。"""
+        system_prompt = self._material_system_prompt()
+        user_prompt = self._material_user_prompt(
+            outline,
+            section,
+            search_results,
+            feedback_note,
+            retry_note,
+        )
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
         with timed_block(
             logger,
             f"Researcher LLM 提炼素材: {section} attempt={attempt}",
             slow_after=15.0,
         ):
-            response = self.llm.invoke([
-                SystemMessage(content=self._material_system_prompt()),
-                HumanMessage(
-                    content=self._material_user_prompt(
-                        outline,
-                        section,
-                        search_results,
-                        feedback_note,
-                        retry_note,
-                    )
-                )
-            ])
+            with tracked_call(logger, f"Researcher LLM 提炼素材: {section}", [system_prompt, user_prompt]) as record:
+                response = self.llm.invoke(messages)
+                record["output_payload"] = response.content
         with timed_block(logger, f"解析研究素材 JSON: {section}", slow_after=1.0):
             return parse_llm_json(response.content, ResearchMaterial)
 

@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from sop_artifacts import ReviewFeedback, DraftContent
+from utils.cost_utils import tracked_call
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
 from utils.quality import validate_draft
@@ -119,10 +120,12 @@ class Reviewer:
         )
 
         with timed_block(logger, "Reviewer LLM 评审初稿", slow_after=18.0):
-            response = self.llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ])
+            with tracked_call(logger, "Reviewer LLM 评审初稿", [system_prompt, user_prompt]) as record:
+                response = self.llm.invoke([
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt)
+                ])
+                record["output_payload"] = response.content
         with timed_block(logger, "解析 Reviewer JSON 输出", slow_after=1.0):
             feedback = parse_llm_json(response.content, ReviewFeedback)
 

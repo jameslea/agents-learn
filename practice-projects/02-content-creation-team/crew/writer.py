@@ -1,9 +1,11 @@
 import os
+import re
 from typing import Optional
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from sop_artifacts import DraftContent, ResearchReport, ContentOutline, ReviewFeedback
+from utils.cost_utils import tracked_call
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
 from utils.quality import (
@@ -19,6 +21,8 @@ load_dotenv()
 logger = get_logger(__name__)
 
 MAX_WRITER_QUALITY_REPAIR_ATTEMPTS = 2
+CASE_SECTION_KEYWORDS = ("案例", "场景", "实践", "应用", "落地")
+NON_CASE_SECTION_KEYWORDS = ("横向", "比较", "对比", "归纳", "风险", "挑战", "实施", "路径", "建议", "证据边界")
 
 
 def format_case_candidates(material) -> str:
@@ -36,14 +40,70 @@ def format_case_candidates(material) -> str:
     return "\n".join(lines)
 
 
+def has_writable_case_candidate(material) -> bool:
+    """判断研究素材是否包含可写成具体公开案例的候选。"""
+    return any(
+        getattr(candidate, "is_writable_case", False)
+        for candidate in getattr(material, "case_candidates", [])
+    )
+
+
+def is_case_outline_section(section: str) -> bool:
+    """判断大纲章节是否以案例/场景承载为主，排除横向比较和风险类章节。"""
+    if any(keyword in section for keyword in NON_CASE_SECTION_KEYWORDS):
+        return False
+    return any(keyword in section for keyword in CASE_SECTION_KEYWORDS)
+
+
+def downgrade_case_section_title(section: str) -> str:
+    """把证据不足的案例章降级为证据边界/趋势观察章，避免主标题继续暗示具体案例。"""
+    cleaned = re.sub(r"^\s*(?:案例|场景)[一二三四五六七八九十\d]*[：:、\-\s]*", "", section).strip()
+    cleaned = cleaned.replace("实际案例", "应用场景").replace("应用案例", "应用场景").replace("案例", "场景")
+    cleaned = cleaned or section
+    return f"证据边界与趋势观察：{cleaned}"
+
+
+def build_evidence_adjusted_outline(
+    outline: ContentOutline,
+    research: ResearchReport,
+) -> tuple[ContentOutline, dict[str, str]]:
+    """根据研究结果降级没有可写案例候选的案例章。"""
+    material_by_section = {material.section_name: material for material in research.materials}
+    adjusted_sections: list[str] = []
+    section_aliases: dict[str, str] = {}
+
+    for section in outline.sections:
+        material = material_by_section.get(section)
+        should_downgrade = (
+            material is not None
+            and is_case_outline_section(section)
+            and not has_writable_case_candidate(material)
+        )
+        if should_downgrade:
+            adjusted = downgrade_case_section_title(section)
+            section_aliases[section] = adjusted
+            adjusted_sections.append(adjusted)
+            continue
+        adjusted_sections.append(section)
+
+    if not section_aliases:
+        return outline, {}
+
+    adjusted_title = outline.title
+    if len(section_aliases) >= 2:
+        adjusted_title = (
+            adjusted_title
+            .replace("实际应用案例", "应用场景与证据边界")
+            .replace("应用案例", "应用场景与证据边界")
+        )
+    logger.info("Writer 降级证据不足案例章: count=%d sections=%s", len(section_aliases), list(section_aliases))
+    return outline.model_copy(update={"title": adjusted_title, "sections": adjusted_sections}), section_aliases
+
+
 def build_writer_editorial_contract(outline: ContentOutline) -> str:
     """生成稳定的写作契约，减少同一大纲下的版式随机波动。"""
     section_count = len(outline.sections)
-    case_sections = [
-        section
-        for section in outline.sections
-        if any(keyword in section for keyword in ("案例", "场景", "实践", "应用", "落地"))
-    ]
+    case_sections = [section for section in outline.sections if is_case_outline_section(section)]
     case_section_hint = "、".join(case_sections[:4]) or "案例或应用章节"
     return (
         "## 编辑契约（优先遵守，用来稳定报告节奏）\n"
@@ -104,6 +164,7 @@ class Writer:
         history_summary: str = ""
     ) -> DraftContent:
         """根据大纲和研究素材撰写初稿，参考历史摘要和评审反馈"""
+        outline, section_aliases = build_evidence_adjusted_outline(outline, research)
         system_prompt = (
             "你是一名专业的商业分析师和深度报告作家。你的任务是根据大纲和研究素材，"
             "撰写一份专业、深度、数据翔实且自然流畅的 Markdown 报告。"
@@ -131,8 +192,9 @@ class Writer:
                     f"章节来源{index} -> 全局[{source_number_by_url[normalized_source]}]: {normalized_source} | {quality} | {note}"
                 )
             context_parts.append(
-                f"### {m.section_name}\n"
-                f"内容: {m.raw_data}\n"
+                f"### {section_aliases.get(m.section_name, m.section_name)}\n"
+                + (f"原始大纲章节: {m.section_name}\n" if m.section_name in section_aliases else "")
+                + f"内容: {m.raw_data}\n"
                 f"该章节入选来源与可信度:\n" + ("\n".join(source_details) or "无入选来源，避免为该章节引入未给出的具体数字或案例。")
                 + "\n该章节案例候选与可写性:\n"
                 + format_case_candidates(m)
@@ -222,10 +284,12 @@ class Writer:
         )
 
         with timed_block(logger, "Writer LLM 生成初稿", slow_after=25.0):
-            response = self.llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ])
+            with tracked_call(logger, "Writer LLM 生成初稿", [system_prompt, user_prompt]) as record:
+                response = self.llm.invoke([
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt)
+                ])
+                record["output_payload"] = response.content
         with timed_block(logger, "解析 Writer JSON 输出", slow_after=1.0):
             return parse_llm_json(response.content, DraftContent)
 
