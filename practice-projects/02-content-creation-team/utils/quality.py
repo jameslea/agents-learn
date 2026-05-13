@@ -6,6 +6,7 @@
 - research_quality: 研究素材门禁
 - references: 参考资料解析与重编号
 - draft_quality: 草稿结构、字数和引用闭环门禁
+- outline_evaluation: 大纲质量评估指标
 - report_evaluation: 历史报告质量评估指标
 
 保留本文件是为了兼容既有 `from utils.quality import ...` 调用。
@@ -27,6 +28,11 @@ from utils.references import (
     normalize_draft_references,
     parse_reference_urls,
 )
+from utils.outline_evaluation import (
+    OutlineQualityMetrics,
+    evaluate_outline_quality,
+    validate_outline,
+)
 from utils.report_evaluation import (
     ReportQualityMetrics,
     compare_reports,
@@ -46,11 +52,13 @@ from utils.url_utils import is_valid_url, unique_urls
 
 __all__ = [
     "HIGH_QUALITY_SOURCE_TIERS",
+    "OutlineQualityMetrics",
     "REFERENCE_HEADING",
     "ReportQualityMetrics",
     "SOURCE_TIER_RANK",
     "compare_reports",
     "count_report_units",
+    "evaluate_outline_quality",
     "evaluate_report_quality",
     "has_report_title",
     "infer_source_tier",
@@ -68,5 +76,6 @@ __all__ = [
     "subsection_count",
     "unique_urls",
     "validate_draft",
+    "validate_outline",
     "validate_research_report",
 ]

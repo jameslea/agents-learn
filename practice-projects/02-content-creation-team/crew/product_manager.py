@@ -5,76 +5,16 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from sop_artifacts import ContentOutline
 from utils.json_utils import parse_llm_json
 from utils.logging_utils import get_logger, timed_block
+from utils.outline_evaluation import (
+    MAX_OUTLINE_SECTIONS,
+    MIN_OUTLINE_SECTIONS,
+    validate_outline,
+)
 
 load_dotenv()
 logger = get_logger(__name__)
 
-MIN_OUTLINE_SECTIONS = 6
-MAX_OUTLINE_SECTIONS = 10
 MAX_OUTLINE_ATTEMPTS = 2
-BACKGROUND_KEYWORDS = ("背景", "趋势", "现状", "问题", "概览", "定义")
-EVIDENCE_KEYWORDS = ("技术", "架构", "能力", "市场", "数据", "证据", "格局", "基础")
-CASE_KEYWORDS = ("案例", "场景", "实践", "应用", "落地")
-RISK_KEYWORDS = ("风险", "挑战", "限制", "治理", "合规", "失败", "教训")
-ACTION_KEYWORDS = ("实施", "路径", "建议", "策略", "路线图", "展望", "决策")
-INDUSTRY_ONLY_KEYWORDS = ("制造", "金融", "医疗", "零售", "物流", "供应链", "教育", "能源", "政务", "人力资源")
-
-
-def _has_any_keyword(section: str, keywords: tuple[str, ...]) -> bool:
-    """判断章节标题是否承担某类结构角色。"""
-    return any(keyword in section for keyword in keywords)
-
-
-def validate_outline(outline: ContentOutline) -> list[str]:
-    """检查大纲是否足够支撑一篇深度报告。"""
-    issues: list[str] = []
-    section_count = len(outline.sections)
-
-    if section_count < MIN_OUTLINE_SECTIONS:
-        issues.append(
-            f"章节数量 {section_count} 少于 {MIN_OUTLINE_SECTIONS}，容易导致报告过于粗略。"
-        )
-
-    if section_count > MAX_OUTLINE_SECTIONS:
-        issues.append(
-            f"章节数量 {section_count} 超过 {MAX_OUTLINE_SECTIONS}，容易导致调研范围失控。"
-        )
-
-    broad_case_sections = [
-        section
-        for section in outline.sections
-        if "案例" in section and any(keyword in section for keyword in ["应用", "业务", "行业", "实践"])
-    ]
-    if section_count <= MIN_OUTLINE_SECTIONS and broad_case_sections:
-        issues.append(
-            "案例章节过于宽泛，建议拆成多个可独立调研的行业、场景或对象章节。"
-        )
-
-    role_checks = [
-        ("背景/趋势/问题定义", BACKGROUND_KEYWORDS),
-        ("证据基础/技术基础/市场数据", EVIDENCE_KEYWORDS),
-        ("案例/场景/实践分析", CASE_KEYWORDS),
-        ("风险/挑战/限制/治理", RISK_KEYWORDS),
-        ("实施路径/策略建议/未来展望", ACTION_KEYWORDS),
-    ]
-    for role_name, keywords in role_checks:
-        if not any(_has_any_keyword(section, keywords) for section in outline.sections):
-            issues.append(f"缺少“{role_name}”类章节。")
-
-    industry_like_sections = [
-        section
-        for section in outline.sections
-        if _has_any_keyword(section, INDUSTRY_ONLY_KEYWORDS)
-    ]
-    if len(industry_like_sections) >= max(4, section_count // 2):
-        has_synthesis_section = any(
-            _has_any_keyword(section, ("比较", "归纳", "模式", "框架", "评估", "总结"))
-            for section in outline.sections
-        )
-        if not has_synthesis_section:
-            issues.append("大纲偏行业枚举，缺少横向比较、模式归纳或评估框架章节。")
-
-    return issues
 
 
 class ProductManager:
@@ -91,23 +31,11 @@ class ProductManager:
 
     def plan_content(self, topic: str) -> ContentOutline:
         """根据主题规划内容大纲"""
-        system_prompt = (
-            "你是一名资深产品经理和内容策划专家。你的任务是根据用户给出的主题，"
-            "规划一份结构严谨、逻辑清晰、便于后续调研和写作的深度报告大纲。"
-            "请以 JSON 格式返回，字段值中不得使用双引号，用单引号或中文引号代替。"
-        )
-
         retry_note = ""
         latest_outline = None
         latest_issues = []
         for attempt in range(1, MAX_OUTLINE_ATTEMPTS + 1):
-            with timed_block(logger, f"PM LLM 规划大纲 attempt={attempt}", slow_after=8.0):
-                response = self.llm.invoke([
-                    SystemMessage(content=system_prompt),
-                    HumanMessage(content=self._outline_user_prompt(topic, retry_note))
-                ])
-            with timed_block(logger, "解析 PM JSON 输出", slow_after=1.0):
-                latest_outline = parse_llm_json(response.content, ContentOutline)
+            latest_outline = self.generate_outline_once(topic, retry_note, attempt)
 
             latest_issues = validate_outline(latest_outline)
             if not latest_issues:
@@ -128,6 +56,27 @@ class ProductManager:
             "PM 大纲质量门禁未通过：\n"
             + "\n".join(f"- {issue}" for issue in latest_issues)
         )
+
+    def generate_outline_once(
+        self,
+        topic: str,
+        retry_note: str = "",
+        attempt: int = 1,
+    ) -> ContentOutline:
+        """只调用一次 PM LLM，用于评估首轮大纲质量或由 plan_content 复用。"""
+        system_prompt = (
+            "你是一名资深产品经理和内容策划专家。你的任务是根据用户给出的主题，"
+            "规划一份结构严谨、逻辑清晰、便于后续调研和写作的深度报告大纲。"
+            "请以 JSON 格式返回，字段值中不得使用双引号，用单引号或中文引号代替。"
+        )
+
+        with timed_block(logger, f"PM LLM 规划大纲 attempt={attempt}", slow_after=8.0):
+            response = self.llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=self._outline_user_prompt(topic, retry_note))
+            ])
+        with timed_block(logger, "解析 PM JSON 输出", slow_after=1.0):
+            return parse_llm_json(response.content, ContentOutline)
 
     def _outline_user_prompt(self, topic: str, retry_note: str = "") -> str:
         """构造大纲规划提示词，避免生成过粗的三段式大纲。"""
