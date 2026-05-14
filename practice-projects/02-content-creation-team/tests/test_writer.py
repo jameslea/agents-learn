@@ -84,7 +84,6 @@ def base_state() -> dict:
                 )
             ]
         ),
-        "history_summary": "",
     }
 
 

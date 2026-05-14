@@ -23,8 +23,8 @@ load_dotenv()
 logger = get_logger(__name__)
 
 MAX_OUTLINE_ATTEMPTS = 2
-DEFAULT_OUTLINE_CANDIDATE_SAMPLES = 5
-DEFAULT_OUTLINE_TOP_N = 3
+DEFAULT_OUTLINE_CANDIDATE_SAMPLES = 1
+DEFAULT_OUTLINE_TOP_N = 1
 
 
 class ProductManager:
@@ -169,40 +169,9 @@ def pm_node(state):
     logger.info("进入 PM 节点: topic=%s", state["topic"])
     with timed_block(logger, "PM 节点总耗时", slow_after=10.0):
         pm = ProductManager()
-        samples = _env_int("PM_OUTLINE_SAMPLES", DEFAULT_OUTLINE_CANDIDATE_SAMPLES)
-        top_n = _env_int("PM_OUTLINE_TOP_N", DEFAULT_OUTLINE_TOP_N)
-        llm_judge = _env_bool("PM_OUTLINE_LLM_JUDGE", True)
-        if samples <= 1:
-            outline = pm.plan_content(state["topic"])
-            candidates = [outline]
-            metrics = [evaluate_outline_quality(outline, name="sample_1")]
-            judge_result = None
-        else:
-            outline, candidates, metrics, judge_result = pm.plan_outline_candidates(
-                state["topic"],
-                samples=samples,
-                top_n=top_n,
-                llm_judge=llm_judge,
-            )
-    logger.info("PM 节点完成: title=%s sections=%d candidates=%d", outline.title, len(outline.sections), len(candidates))
+        outline = pm.plan_content(state["topic"])
+    logger.info("PM 节点完成: title=%s sections=%d", outline.title, len(outline.sections))
     return {
         "outline": outline,
-        "outline_candidates": candidates,
-        "outline_candidate_metrics": [metric.to_dict() for metric in metrics],
-        "outline_judge": judge_result.model_dump() if judge_result else None,
         "history": [f"PM 规划了大纲：{outline.title}"],
     }
-
-
-def _env_int(name: str, default: int) -> int:
-    try:
-        return int(os.getenv(name, str(default)))
-    except ValueError:
-        return default
-
-
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.lower() not in {"0", "false", "no", "off"}

@@ -102,6 +102,5 @@ class TeamState(BaseModel):
     draft: Optional[DraftContent] = None
     draft_history: List[DraftContent] = Field(default_factory=list, description="历次生成的初稿版本记录")
     latest_feedback: Optional[ReviewFeedback] = None
-    history_summary: str = ""
     review_count: int = 0
     history: List[str] = []

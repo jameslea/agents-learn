@@ -1,7 +1,7 @@
 import operator
 import re
 from pathlib import Path
-from typing import TypedDict, List, Annotated
+from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 try:
@@ -19,7 +19,6 @@ from crew.product_manager import pm_node
 from crew.researcher import researcher_node
 from crew.writer import writer_node
 from crew.reviewer import reviewer_node
-from crew.summarizer import summarizer_node
 from utils.logging_utils import configure_logging, get_logger, timed_block
 
 configure_logging()
@@ -29,17 +28,12 @@ logger = get_logger(__name__)
 class GraphState(TypedDict, total=False):
     topic: str
     outline: ContentOutline
-    outline_candidates: List[ContentOutline]
-    outline_candidate_metrics: List[dict]
-    outline_judge: dict
     research_report: ResearchReport
     draft: DraftContent
-    draft_history: Annotated[List[DraftContent], operator.add]  # 存储所有版本的 Draft
+    draft_history: Annotated[list[DraftContent], operator.add]  # 存储所有版本的 Draft
     latest_feedback: ReviewFeedback
     review_count: int
-    quality_enhancement_count: int
-    history: Annotated[List[str], operator.add]
-    history_summary: str  # 压缩后的历史摘要
+    history: Annotated[list[str], operator.add]
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -130,63 +124,6 @@ def final_status_heading(is_approved: bool, review_count: int) -> str:
     return "⚠️ 报告未通过评审。最终状态摘要："
 
 
-def selected_outline_from_choice(
-    candidates: list[ContentOutline],
-    metrics: list[dict],
-    choice: str,
-    default_outline: ContentOutline,
-) -> tuple[ContentOutline, str | None]:
-    """根据人工输入选择候选大纲；空输入或无效输入保留默认大纲。"""
-    choice = choice.strip()
-    if not choice:
-        return default_outline, None
-    if not choice.isdigit():
-        return default_outline, None
-
-    index = int(choice) - 1
-    if index < 0 or index >= len(candidates):
-        return default_outline, None
-
-    metric_name = None
-    if index < len(metrics):
-        metric_name = str(metrics[index].get("name") or f"candidate_{index + 1}")
-    return candidates[index], metric_name
-
-
-def outline_candidates_report(state_values: dict) -> str:
-    """构造人工断点的大纲候选展示文本。"""
-    candidates = state_values.get("outline_candidates") or []
-    metrics = state_values.get("outline_candidate_metrics") or []
-    judge = state_values.get("outline_judge") or {}
-    if not candidates or not metrics:
-        outline = state_values.get("outline")
-        if not outline:
-            return "未找到可展示的大纲。"
-        return _outline_detail(outline)
-
-    lines = ["候选大纲 Top 列表："]
-    if judge.get("best_candidate"):
-        lines.append(f"LLM 主编推荐: {judge['best_candidate']}，理由: {judge.get('selection_reason', '未提供')}")
-
-    for index, outline in enumerate(candidates, 1):
-        metric = metrics[index - 1] if index - 1 < len(metrics) else {}
-        lines.append("")
-        lines.append(
-            f"{index}. {metric.get('name', f'candidate_{index}')} | "
-            f"分数 {metric.get('total_score', '-')}, "
-            f"章节 {metric.get('section_count', len(outline.sections))}, "
-            f"案例 {metric.get('case_sections', '-')}, "
-            f"具体率 {metric.get('case_specificity_ratio', '-')}, "
-            f"决策价值 {metric.get('decision_value_sections', '-')}"
-        )
-        issues = metric.get("issues") or []
-        if issues:
-            lines.append(f"   问题: {'；'.join(issues[:2])}")
-        lines.extend(_outline_detail(outline, indent="   ").splitlines())
-
-    return "\n".join(lines)
-
-
 def _outline_detail(outline: ContentOutline, indent: str = "") -> str:
     lines = [
         f"{indent}大纲标题: {outline.title}",
@@ -226,7 +163,6 @@ def create_team_graph():
     workflow.add_node("researcher", researcher_node)
     workflow.add_node("writer", writer_node)
     workflow.add_node("reviewer", reviewer_node)
-    workflow.add_node("summarizer", summarizer_node)
 
     # 设置入口
     workflow.set_entry_point("pm")
@@ -236,12 +172,9 @@ def create_team_graph():
     workflow.add_edge("researcher", "writer")
     workflow.add_edge("writer", "reviewer")
     
-    # 评审后先进行摘要压缩
-    workflow.add_edge("reviewer", "summarizer")
-
-    # 从摘要节点进行条件循环路由
+    # 评审后直接路由，避免每轮额外进入摘要节点。
     workflow.add_conditional_edges(
-        "summarizer",
+        "reviewer",
         router,
         {
             "researcher": "researcher",
@@ -272,9 +205,7 @@ if __name__ == "__main__":
     initial_state = {
         "topic": "2026 年 AI Agent 在企业数字转型中的实际应用案例",
         "review_count": 0,
-        "quality_enhancement_count": 0,
         "history": ["任务启动"],
-        "history_summary": "",
         "draft_history": []
     }
 
@@ -291,29 +222,14 @@ if __name__ == "__main__":
         logger.info("流程进入人工审核断点: next=%s", snapshot.next)
         print("\n" + "!"*30)
         print("🛑 流程已中断：等待人类审核大纲")
-        print(outline_candidates_report(snapshot.values))
+        outline = snapshot.values.get("outline")
+        print(_outline_detail(outline) if outline else "未找到可展示的大纲。")
         
         # 简单的人工交互模拟
-        user_input = input("\n请审核大纲。输入 1-3 选择候选，按回车批准默认选择，输入 'exit' 退出: ")
+        user_input = input("\n请审核大纲。按回车批准，输入 'exit' 退出: ")
         if user_input.lower() == 'exit':
             print("任务已取消。")
             exit()
-
-        selected_outline, selected_name = selected_outline_from_choice(
-            snapshot.values.get("outline_candidates") or [],
-            snapshot.values.get("outline_candidate_metrics") or [],
-            user_input,
-            snapshot.values.get("outline"),
-        )
-        if selected_outline and selected_outline != snapshot.values.get("outline"):
-            app.update_state(
-                config,
-                {
-                    "outline": selected_outline,
-                    "history": [f"人类选择了大纲候选：{selected_name or selected_outline.title}"],
-                },
-            )
-            print(f"✅ 已选择候选大纲：{selected_name or selected_outline.title}")
         
         print("✅ 人类已批准。正在恢复流程...\n")
         # 恢复运行（不需要传 initial_state，它会从断点恢复）
@@ -340,8 +256,6 @@ if __name__ == "__main__":
     print(f"  字数     : {draft.word_count}")
     print(f"  引用来源 : {len(draft.citations)} 条")
     print(f"  评审次数 : {final_state['review_count']}")
-    if final_state.get("quality_enhancement_count"):
-        print(f"  质量增强 : {final_state['quality_enhancement_count']} 次")
     if latest_feedback and not is_approved:
         print("  未通过原因 :")
         for issue in latest_feedback.specific_issues[:5]:

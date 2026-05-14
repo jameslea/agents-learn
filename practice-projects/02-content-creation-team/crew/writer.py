@@ -161,9 +161,8 @@ class Writer:
         outline: ContentOutline,
         research: ResearchReport,
         feedback: Optional[ReviewFeedback] = None,
-        history_summary: str = ""
     ) -> DraftContent:
-        """根据大纲和研究素材撰写初稿，参考历史摘要和评审反馈"""
+        """根据大纲和研究素材撰写初稿，必要时参考评审反馈。"""
         outline, section_aliases = build_evidence_adjusted_outline(outline, research)
         system_prompt = (
             "你是一名专业的商业分析师和深度报告作家。你的任务是根据大纲和研究素材，"
@@ -213,7 +212,6 @@ class Writer:
         )
 
         # 评审反馈与历史摘要处理
-        history_info = f"\n## 历史执行摘要\n{history_summary}\n" if history_summary else ""
         feedback_section = ""
         if feedback and not feedback.is_approved:
             feedback_section = (
@@ -246,7 +244,6 @@ class Writer:
             f"报告标题: {outline.title}\n"
             f"目标受众: {outline.target_audience}\n"
             f"大纲结构: {outline.sections}\n"
-            f"{history_info}"
             f"{feedback_section}\n"
             f"研究素材（包含数据和对应的来源池）:\n{context}\n\n"
             f"{source_audit}\n\n"
@@ -304,9 +301,8 @@ def writer_node(state):
         writer = Writer()
         feedback = state.get("latest_feedback")
         active_feedback = feedback
-        history_summary = state.get("history_summary", "")
         if feedback and not feedback.is_approved:
-            print(f"  ↳ 接收评审反馈与历史摘要进行修改")
+            print(f"  ↳ 接收评审反馈进行修改")
             logger.info(
                 "Writer 接收返工反馈: suggestions=%d issues=%d target=%s",
                 len(feedback.suggestions),
@@ -319,7 +315,6 @@ def writer_node(state):
                 state["outline"],
                 state["research_report"],
                 feedback=active_feedback,
-                history_summary=history_summary,
             )
             logger.info(
                 "Writer 生成草稿: attempt=%d word_count=%d citations=%d",

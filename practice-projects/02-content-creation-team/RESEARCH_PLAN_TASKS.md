@@ -102,18 +102,26 @@ EvidenceMap 先作为内部 prompt 上下文，不一定马上扩展 `sop_artifa
 
 ## 实施拆分
 
-### [ ] 8.1 研究计划分类器
+> 2026-05-14 简化决策：本设计已从主流程回退。`crew/researcher.py` 恢复为逐章搜索和提炼，避免在线 `ResearchPlan/EvidenceMap/hybrid/synthesis` 路径继续增加控制流复杂度。本文档保留为后续重新设计的参考，不能视为当前主流程实现状态。
+>
+> 2026-05-14 暂停结论：跨章节研究计划的方向有价值，但在线接入会显著增加状态、依赖和 prompt 复杂度。当前项目先停止继续优化内容生成主流程；后续如重启，应先做离线对比和引用支撑关系核查，再决定是否恢复跨章节研究。
+
+### [!] 8.1 研究计划分类器
 
 任务：
 - 新增 `ResearchSectionPlan` 或等价内部结构。
-- 基于现有 `classify_research_section()` 扩展出 `search_mode` 和 `depends_on_roles`。
+- 基于 `content_research.search_planner.classify_research_section()` 扩展出 `search_mode` 和 `depends_on_roles`。
 - 输出调研计划日志，便于观察每章是 `search_primary`、`hybrid` 还是 `synthesis`。
 
 验证：
 - 单测覆盖横向比较、风险、实施路径、证据边界和案例章的分类。
 - 不改 Tavily 调用行为。
 
-### [ ] 8.2 EvidenceMap 构建
+回退记录：
+- `ResearchSectionPlan`、`build_research_plan()` 和 `ordered_research_plan()` 已从主流程移除。
+- 当前仅保留 `content_research.search_planner.classify_research_section()` 用于搜索词补词，不再控制执行顺序。
+
+### [!] 8.2 EvidenceMap 构建
 
 任务：
 - 从已完成 `ResearchMaterial` 中提取案例候选、来源强弱和证据缺口。
@@ -123,7 +131,11 @@ EvidenceMap 先作为内部 prompt 上下文，不一定马上扩展 `sop_artifa
 - 单测覆盖可写案例、不可写案例、强来源、弱来源、证据缺口摘要。
 - EvidenceMap 不改变现有 `ResearchReport` schema。
 
-### [ ] 8.3 Hybrid/Synthesis 章节上下文注入
+回退记录：
+- `EvidenceMap` 已从主流程移除。
+- 后续如重启，应先做离线对比验证，避免把证据摘要直接塞进在线 prompt。
+
+### [!] 8.3 Hybrid/Synthesis 章节上下文注入
 
 任务：
 - `hybrid` 章节搜索时加入 EvidenceMap 中的关键实体、缺口和来源类型。
@@ -135,7 +147,11 @@ EvidenceMap 先作为内部 prompt 上下文，不一定马上扩展 `sop_artifa
 - 单测确认实施路径 prompt 包含风险和案例摘要。
 - 单测确认证据边界 prompt 包含 `case_candidates` 和来源质量摘要。
 
-### [ ] 8.4 搜索调用控制
+回退记录：
+- `_material_user_prompt()` 不再注入 EvidenceMap 上下文。
+- `hybrid` / `synthesis` 分支已移除，所有被选中的章节都按线性路径搜索和提炼。
+
+### [!] 8.4 搜索调用控制
 
 任务：
 - 允许 `synthesis` 章节默认不调用 Tavily，只基于 EvidenceMap 生成材料。
@@ -145,6 +161,10 @@ EvidenceMap 先作为内部 prompt 上下文，不一定马上扩展 `sop_artifa
 验证：
 - 单测确认 synthesis 章节可跳过 Tavily。
 - 真实运行对比 Tavily 调用量、来源质量和 Reviewer 拒绝原因。
+
+回退记录：
+- `synthesis` 跳过 Tavily 的逻辑已移除。
+- 当前默认行为是：进入本轮调研的每个章节都执行 Tavily 搜索，再由确定性来源排序限制交给 LLM 的结果数量。
 
 ### [ ] 8.5 真实报告验证
 
@@ -159,9 +179,14 @@ EvidenceMap 先作为内部 prompt 上下文，不一定马上扩展 `sop_artifa
 - Tavily 调用量不明显增加，最好减少 synthesis 章节搜索。
 - 全量单元测试通过。
 
+当前验证：
+- 真实运行 `reports/rejected_report_20260514_092833.md` 仍未通过评审，说明在线跨章节流程没有稳定解决核心问题。
+- 当前结论：阶段 8 暂停在线接入，后续应先用离线对比工具证明收益，再重新设计。
+- 后续真实运行 `reports/final_report_20260514_112128.md` 虽最终通过 Reviewer，但人工复核仍发现弱来源和引用支撑风险；这进一步说明主流程通过不等于报告事实质量可靠。
+
 ## 风险
 
 - 过度依赖前文材料可能导致后半部分信息不足，需要保留少量补搜能力。
 - EvidenceMap 如果太长，会增加 LLM 成本并稀释重点。
 - synthesis 章节跳过搜索后，可能缺少外部 benchmark，需要按章节类型谨慎启用。
-- 阶段 8 会改变 Researcher 的核心控制流，应单独提交，避免和阶段 5 的搜索词优化混在一个提交中。
+- 阶段 8 会改变 Researcher 的核心控制流，后续必须先离线验证，再单独接入，不能和来源质量优化混在一起。
