@@ -112,6 +112,8 @@ pip install -r requirements/base.txt
     - [模型运行时工程化](./docs/concepts/model-runtime-and-engineering.md)
     - [Agent 设计方法论](./docs/concepts/agent-design-methodology.md)
     - [Agent Runtime 哲学](./docs/concepts/agent-runtime-philosophy.md)
+    - [Agent 框架与服务选型地图](./docs/concepts/agent-frameworks-and-services-landscape.md)
+    - [多模态 Agent 能力地图](./docs/concepts/multimodal-agent-capabilities-landscape.md)
 
 ---
 
