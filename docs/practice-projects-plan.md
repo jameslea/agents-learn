@@ -365,6 +365,7 @@ practice-projects/00-evaluation-infra/
 
 **产出文档**：
 - `docs/concepts/agent-design-methodology.md`：通用 Agent 设计方法论与检查表。
+- `docs/concepts/agent-runtime-philosophy.md`：从 Agent 能力到运行时治理的阶段性方法论。
 - `practice-projects/02-content-creation-team/POSTMORTEM.md`：项目 B 复盘与后续重启条件。
 
 **验收标准**：

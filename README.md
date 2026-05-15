@@ -110,6 +110,8 @@ pip install -r requirements/base.txt
 - **核心概念 (Core Concepts)**：
     - [Reranker 深度选型](./docs/concepts/reranker-deep-dive.md)
     - [模型运行时工程化](./docs/concepts/model-runtime-and-engineering.md)
+    - [Agent 设计方法论](./docs/concepts/agent-design-methodology.md)
+    - [Agent Runtime 哲学](./docs/concepts/agent-runtime-philosophy.md)
 
 ---
 
