@@ -26,6 +26,8 @@ class RepairAgent:
             repaired, summary = self._repair_timeout(original, error)
         elif error.kind in {ErrorKind.RUNTIME_ERROR, ErrorKind.ASSERTION_ERROR}:
             repaired, summary = self._repair_runtime_or_assertion(original, error)
+        elif error.kind == ErrorKind.UNKNOWN:
+            repaired, summary = self._repair_unknown(original, error)
 
         if repaired == original:
             return False, summary
@@ -70,4 +72,26 @@ class RepairAgent:
                 "def safe_divide(a, b):\n    if b == 0:\n        return None\n    return a / b",
             )
             return repaired, "Added zero-division guard returning None."
+        if "def clamp(value, minimum, maximum):\n    return value" in source:
+            repaired = source.replace(
+                "def clamp(value, minimum, maximum):\n    return value",
+                "def clamp(value, minimum, maximum):\n    if value < minimum:\n        return minimum\n    if value > maximum:\n        return maximum\n    return value",
+            )
+            return repaired, "Implemented lower and upper bounds in clamp."
+        if "def get_user_email(users, user_id):\n    return users[user_id][\"email\"]" in source:
+            repaired = source.replace(
+                "def get_user_email(users, user_id):\n    return users[user_id][\"email\"]",
+                "def get_user_email(users, user_id):\n    user = users.get(user_id)\n    if not user:\n        return None\n    return user.get(\"email\")",
+            )
+            return repaired, "Added missing-user guard and safe email lookup."
+        if "def average(values):\n    return sum(values) / len(values)" in source:
+            repaired = source.replace(
+                "def average(values):\n    return sum(values) / len(values)",
+                "def average(values):\n    if not values:\n        return 0\n    return sum(values) / len(values)",
+            )
+            return repaired, "Added empty-list guard returning 0."
         return source, f"No runtime/assertion repair rule for: {error.message}"
+
+    def _repair_unknown(self, source: str, error: ErrorSummary) -> tuple[str, str]:
+        """示例修复：处理当前分类器尚未细分的常见异常。"""
+        return source, f"No unknown-error repair rule for: {error.message}"

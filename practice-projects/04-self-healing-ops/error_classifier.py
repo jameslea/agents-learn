@@ -51,7 +51,7 @@ def classify_result(run_result: RunResult, safety_issues: list[SafetyIssue] | No
             evidence=_traceback_tail(stderr),
             line_number=line_number,
         )
-    if "ZeroDivisionError" in stderr:
+    if "ZeroDivisionError" in stderr or "KeyError" in stderr:
         return ErrorSummary(
             kind=ErrorKind.RUNTIME_ERROR,
             message=_last_error_line(stderr),

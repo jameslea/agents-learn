@@ -22,6 +22,18 @@ class ErrorKind(str, Enum):
     UNKNOWN = "unknown"
 
 
+class FinalStatus(str, Enum):
+    """任务最终状态。
+
+    blocked 表示安全系统正确拒绝执行危险代码，不应和 failed 混为一类。
+    """
+
+    PENDING = "pending"
+    PASSED = "passed"
+    FAILED = "failed"
+    BLOCKED = "blocked"
+
+
 class RunResult(BaseModel):
     """一次受限脚本执行的原始结果。"""
 
@@ -72,6 +84,17 @@ class RepairAttempt(BaseModel):
     verification: VerificationResult
 
 
+class PatchProposal(BaseModel):
+    """LLM RepairAgent 输出的结构化 patch 建议。
+
+    当前只支持整文件替换，后续可以扩展为 unified diff 或多文件 patch。
+    """
+
+    should_patch: bool
+    summary: str
+    patched_source: str = ""
+
+
 class SelfHealState(BaseModel):
     """单个 challenge task 在自愈过程中的全量状态。"""
 
@@ -81,7 +104,7 @@ class SelfHealState(BaseModel):
     target_path: Path
     max_attempts: int = 3
     attempts: list[RepairAttempt] = Field(default_factory=list)
-    final_status: str = "pending"
+    final_status: FinalStatus = FinalStatus.PENDING
     final_reason: str = ""
 
     model_config = {"arbitrary_types_allowed": True}
