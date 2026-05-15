@@ -8,11 +8,11 @@
 - **LangGraph**：采用 Supervisor 模式进行多 Agent 总控调度。
 - **Pydantic**：定义结构化的中间产物 (SOP Artifacts)，确保任务交接不丢信息。
 - **Tavily**：研究员使用的联网搜索工具。
-- **DeepSeek API**: 核心推理与生成引擎。
+- **多 LLM Provider**: 通过统一工厂接入 DeepSeek / OpenAI / MiniMax / custom OpenAI-compatible API。
 - **MemorySaver**: 断点续传与人类在环审核。
 
 ## 配置与运行
-- 在项目根目录或本项目目录放置 `.env`，配置 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`TAVILY_API_KEY`。代码通过 `python-dotenv` 自动读取，不需要把密钥写入源码。
+- 在项目根目录或本项目目录放置 `.env`，配置 `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY` 和 `TAVILY_API_KEY`。也可以使用 provider 专属变量，例如 `DEEPSEEK_API_KEY` 或 `MINIMAX_API_KEY`。代码通过 `python-dotenv` 自动读取，不需要把密钥写入源码。
 - 安装依赖：`pip install -r requirements.txt`
 - 运行流程：`python supervisor_graph.py`
 - 最终报告和引用清单会写入 `reports/` 目录。
@@ -47,6 +47,8 @@
 最近一次真实运行生成了 `reports/final_report_20260514_112128.md`，流程最终通过 Reviewer，结构、可读性和证据边界表达都有改善。但人工复核仍发现弱来源支撑核心数据、引用与句子支撑关系可能错配、综合案例缺少可追溯证据等问题。因此当前版本适合作为学习项目和流程实验样本，不应视为无需人工编辑即可外发的报告生产系统。
 
 后续如重启，优先做离线评估和事实核查能力，而不是继续增加在线 Agent 分支。尤其需要先解决“引用是否真正支撑对应句子”的验证问题。
+
+完整系统复盘见 `POSTMORTEM.md`。报告内容对 Agent 学习的启发见 `AGENT_REPORT_INSIGHTS.md`。通用方法论沉淀见 `../../docs/concepts/agent-design-methodology.md`。
 
 `reports/final_report_20260512_144407.md` 仍是目前最好的阅读体验样本，但它是一次未完整保存生成条件的测试结果，不能当作稳定能力。后续如果重启，应先固定大纲、搜索材料、引用清单和 Writer 输入，验证能否复现类似质量；再逐步放开 PM 动态大纲和 Researcher 动态搜索。
 

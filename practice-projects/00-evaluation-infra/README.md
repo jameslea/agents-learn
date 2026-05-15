@@ -24,11 +24,11 @@ practice-projects/00-evaluation-infra/
 
 ### 2. `llm_judge.py`
 利用 LLM 对 RAG 的输出质量进行定性评估。
-- **配置自适应**：自动读取 `.env` 中的 `OPENAI_BASE_URL` 和 `MODEL_NAME`，支持 DeepSeek 等 OpenAI 兼容接口。
+- **配置自适应**：自动读取 `.env` 中的 `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY`，支持 DeepSeek、OpenAI、MiniMax 和自定义 OpenAI-compatible 接口。
 - **评估维度**：
     - `evaluate_faithfulness`: 忠实度评估（回答是否基于上下文，而非幻觉）。
     - `evaluate_relevance`: 相关性评估（回答是否解决了用户问题）。
-- **结构化输出**：强制返回 JSON 格式，包含分数（score）和理由（reasoning）。
+- **结构化输出**：对支持 JSON mode 的 provider 使用 `response_format`；对 MiniMax 等兼容接口则通过 Prompt 约束与本地 JSON 提取兜底。
 
 ## 使用方式
 通常由其他项目通过 `sys.path` 引用：

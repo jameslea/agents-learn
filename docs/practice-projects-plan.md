@@ -13,8 +13,9 @@
 - [项目 A：企业知识库问答系统](#项目-a企业知识库问答系统)
 - [项目 B：内容创作团队](#项目-b内容创作团队)
 - [项目 C：自主调研助手](#项目-c自主调研助手)
-- [项目 D：自愈运维 Agent](#项目-d自愈运维-agent)
+- [项目 D-lite：代码执行安全与自愈最小实验](#项目-d-lite代码执行安全与自愈最小实验)
 - [项目 E：评估与安全防线（横向基础设施）](#项目-e评估与安全防线横向基础设施)
+- [方法论复盘阶段：从多 Agent 实验到可控系统](#方法论复盘阶段从多-agent-实验到可控系统)
 - [推进顺序](#推进顺序)
 - [每个项目的 README 模板](#每个项目的-readme-模板)
 - [预估总工作量](#预估总工作量)
@@ -27,11 +28,13 @@
 项目 A：知识库问答 —— 数据中心型
 项目 B：内容创作团队 —— 多角色协作型
 项目 C：自主调研助手 —— 任务循环型
-项目 D：自愈运维 Agent —— 对话自愈型
+项目 D-lite：代码执行安全与自愈最小实验 —— 最小自愈闭环型
 项目 E：评估与安全防线 —— 治理底座型（横向穿透所有项目）
+方法论复盘阶段：B 后 D 前 —— 把失败样本转成设计约束
 ```
 
 其中项目 E 不独立存在，而是作为 A-D 的评估/观测/安全基础设施，每个项目都接一套。
+方法论复盘阶段也不是独立产品项目，而是在项目 B 之后强制插入的学习沉淀：先消化多 Agent 报告生成暴露出的不稳定性，再进入风险更高的代码执行与自愈场景。
 
 ---
 
@@ -43,7 +46,7 @@
 |------|---------|------|------|
 | Python | 3.10+ | 所有项目 | 推荐 3.11+，LangGraph / AutoGen 0.4 需要 |
 | LLM API | 至少一个可用 | 所有项目 | DeepSeek / OpenAI / 本地 Ollama 均可；项目 A 的 HyDE 和 Self-RAG 需要较强模型 |
-| Docker Desktop | 最新稳定版 | 项目 D | 自愈运维的沙箱执行依赖 `DockerCommandLineCodeExecutor` |
+| Docker Desktop | 最新稳定版 | 项目 D-lite | 可选增强隔离；最小版本可先用临时目录 + subprocess + timeout |
 | 向量数据库 | ChromaDB 或 FAISS | 项目 A、C | `pip install chromadb` 即可，无需额外服务 |
 | GPU / Apple MPS | 可选但推荐 | 项目 A | Cross-Encoder Rerank 在 CPU 上较慢；Mac M 系列可自动使用 MPS 加速 |
 | Langfuse | Cloud 免费版或自托管 | 项目 E | 自托管需 Docker Compose；Cloud 版注册即用，推荐初期使用 Cloud 版 |
@@ -186,16 +189,34 @@ practice-projects/03-autonomous-research/
 
 ---
 
-## 项目 D：自愈运维 Agent
+## 项目 D-lite：代码执行安全与自愈最小实验
 
-**场景**：给 Agent 一个代码任务（如"写一个爬虫抓取某网站数据"），Agent 写代码 → 在 Docker 沙箱执行 → 遇到报错 → 自己分析报错 → 修改代码 → 重新执行，直到成功。
+**场景**：给 Agent 一个小型 Python 代码任务或故意损坏的脚本，Agent 生成或修改代码 → 在受限环境中执行 → 捕获错误 → 压缩并分类错误 → 生成修复 → 重新运行验证命令，直到成功或达到最大轮数。
+
+**定位调整**：本项目不再尝试实现通用“自愈运维 Agent”。真实运维环境高度依赖 Kubernetes、SSH、CI、云厂商 API、监控和日志系统，作为学习项目容易复杂度失控。当前目标只保留最小自愈闭环：安全执行、错误分类、有限轮修复、客观验证。
+
+**非目标**：
+- 不做 Kubernetes / SSH / 云服务 / CI 平台适配。
+- 不做插件化运维框架。
+- 不做真实生产运维动作，例如重启服务、回滚配置、修改线上资源。
+- 不做复杂多 Agent 编排；如使用 AutoGen，只作为可选对照实验。
+- 不做项目真实文件修改，所有实验在 challenge task 副本或临时目录中完成。
 
 **技术栈**：
-- AutoGen 0.4+（`autogen-agentchat` / `autogen-core` / `autogen-ext`，与仓库 `08-autogen-intro/` 一致）
-- 对话式多 Agent（Coder + Executor + Reviewer），基于 `RoundRobinGroupChat` 或 `SelectorGroupChat`
-- Docker 沙箱执行（`DockerCommandLineCodeExecutor`，物理隔离）
-- AST 安全检查（smolagents 风格）作为第二道防线
+- Python 标准库 + Pydantic 状态模型
+- 可选 LangGraph：表达最小自愈状态机
+- 可选 AutoGen 0.4+：只用于对照“对话式修复”与“状态机修复”的差异
+- 临时目录或 Docker 沙箱执行；优先从临时目录 + subprocess + timeout 起步，Docker 作为增强项
+- AST 安全检查作为执行前拦截
+- 错误分类与 traceback 压缩
 - 最大重试次数 + 超时熔断
+- 轻量 trace：JSONL 记录每轮输入、命令、错误分类、修复摘要和验证结果
+
+**最小学习目标**：
+- 理解代码执行型 Agent 的主要风险边界。
+- 亲手实现一次“失败 → 诊断 → 修复 → 验证”的闭环。
+- 明确 Agent 的解释不能替代测试，修复成功必须由退出码、测试和产物校验证明。
+- 观察错误信息压缩对修复质量的影响。
 
 **核心坑位清单**：
 
@@ -204,36 +225,80 @@ practice-projects/03-autonomous-research/
 | D1 | 代码执行安全：Agent 可能生成危险代码 | 执行安全 |
 | D2 | 报错信息太长，Agent 抓不住重点 | 错误压缩 |
 | D3 | 修复循环：改了 A 坏了 B，无限反复 | 终止条件 |
-| D4 | Docker 环境与宿主机不一致，能跑但结果不对 | 环境一致性 |
+| D4 | 执行环境与预期不一致，能跑但结果不对 | 环境一致性 |
 | D5 | 依赖安装失败，Agent 不会排查 | 错误分类 |
 | D6 | 执行超时，Agent 不感知 | 超时处理 |
 | D7 | 自愈后代码质量下降（打补丁式修复） | 代码审查 |
+| D8 | 过度授权：Agent 直接操作宿主机或真实项目文件 | 最小权限 |
+| D9 | 缺少客观验证：Agent 自称修复成功但测试未证明 | 评估体系 |
+| D10 | Trace 缺失：失败后无法回放每轮代码、错误和验证结果 | 可观测性 |
+| D11 | 证据边界不清：修复计划没有绑定具体错误和验证信号 | 项目 B 报告复盘 |
+
+**推荐控制流**：
+```
+Task
+  → Prepare Workspace（复制 challenge task 到临时目录）
+  → Coder（生成初版代码或最小 patch）
+  → AST Checker（静态安全检查）
+  → Executor（临时目录或 Docker 中执行）
+  → Error Classifier（错误分类与 traceback 压缩）
+  → Repair Step（基于错误证据生成修复）
+  → Verification Runner（重新运行测试/命令/产物校验）
+  → Final Report（输出修复证据、失败原因或未解决原因）
+```
+
+**最小安全边界**：
+- 只允许读写临时工作目录。
+- 默认禁止联网和安装依赖。
+- 默认禁止访问宿主敏感路径。
+- 默认禁止执行 shell 组合命令；执行命令采用参数数组。
+- AST 检查拦截 `os.system`、`subprocess`、`shutil.rmtree`、任意网络访问和危险文件操作。
+- 最大重试次数建议为 3，单次执行超时建议为 5-10 秒。
+
+**客观验证信号**：
+- 命令退出码为 0。
+- 目标测试通过。
+- 超时未触发。
+- AST 安全检查通过。
+- 输出文件、日志或结果满足任务定义。
+- 修复说明能绑定到具体错误类别和验证命令。
 
 **目录结构**：
 ```
 practice-projects/04-self-healing-ops/
-  agents/
-    coder.py               # 编码 Agent
-    executor.py            # 执行 Agent（Docker 沙箱）
-    reviewer.py            # 审查 Agent
-  sandbox/
-    Dockerfile             # 沙箱镜像
-    sandbox_manager.py     # 容器生命周期管理
+  agent.py                 # 单 Agent 修复逻辑
+  state.py                 # 自愈状态模型
   ast_checker.py           # AST 安全检查
-  self_heal_graph.py       # AutoGen 对话流 + LangGraph 编排
+  executor.py              # 临时目录/Docker 执行器
   error_classifier.py      # 报错分类 + 压缩
+  verification.py          # 测试/命令/产物校验
+  self_heal_loop.py        # 最小自愈循环
+  trace_recorder.py        # JSONL 轻量 trace
+  evaluate.py              # 修复成功率、重试次数、超时和拦截统计
   challenge_tasks/         # 故意埋坑的测试任务
     task1_broken_import.py
     task2_infinite_loop.py
     task3_permission_error.py
+    task4_bad_fix_regression.py
+  traces/                  # 每次运行的结构化 trace（JSONL，gitignore）
+  FUTURE_PLUGIN_ARCHITECTURE.md  # 仅记录通用运维插件化方向，不实现
   README.md
 ```
 
 **验收标准**：
-- 给定 3 个故意有 bug 的任务（缺依赖/死循环/权限错误），Agent 自主修复成功率 > 66%
+- 给定 4 个故意有 bug 的本地任务（缺依赖/语法错误/死循环/错误修复回归），Agent 自主修复成功率 > 50%
 - 危险代码（如 `os.system("rm -rf /")`）被 AST 检查器拦截
-- 最大重试 5 次，超限终止
-- Docker 容器执行后自动销毁，不留残留
+- 最大重试 3 次，超限终止并输出最后失败原因
+- 所有代码执行只发生在临时目录或 Docker 中，不修改原始 challenge task
+- 每次运行生成结构化 trace，能回放每轮代码、错误分类、修复摘要、验证命令和结论
+- 修复成功必须由 `verification.py` 的客观信号证明，不能只依赖 Reviewer 文本判断
+- `evaluate.py` 输出修复成功率、平均重试次数、超时次数和安全拦截次数
+
+**未来方向，不纳入当前实现**：
+- 通用运维插件化架构：Kubernetes / SSH / CI / 云厂商 API / 监控日志系统插件。
+- 复杂权限分层与人工审批流。
+- 多 Agent Coder / Executor / Reviewer 协作。
+- 真实服务自愈、回滚、变更审计和生产级 Kill-Switch。
 
 ---
 
@@ -287,6 +352,28 @@ practice-projects/00-evaluation-infra/
 
 ---
 
+## 方法论复盘阶段：从多 Agent 实验到可控系统
+
+**触发条件**：项目 B 完成或暂停后，且在进入项目 D 之前。
+
+**背景**：项目 B 的实践说明，多 Agent 报告生成并不会因为拆出 PM、Researcher、Writer、Reviewer 就自然稳定。角色边界、结构化产物、事实核查、引用支撑、评估基线和 trace 缺一不可。否则系统很容易退化为多个 prompt 串联，并在多轮补丁后失去可解释性。
+
+**目标**：
+- 把项目 B 的失败样本和阶段性结论沉淀为 Agent 设计方法论。
+- 明确“workflow first, agent second”的实践原则。
+- 把项目 B 的经验转成项目 D 的约束：沙箱优先、错误分类优先、测试验证优先、最大重试和权限隔离优先。
+
+**产出文档**：
+- `docs/concepts/agent-design-methodology.md`：通用 Agent 设计方法论与检查表。
+- `practice-projects/02-content-creation-team/POSTMORTEM.md`：项目 B 复盘与后续重启条件。
+
+**验收标准**：
+- 能说明“什么时候不该使用多 Agent”。
+- 能区分 workflow、Agent、handoff、artifact、tool permission 和 evaluation 的职责。
+- 项目 D-lite 的设计不再扩展成通用运维平台，而是聚焦代码执行安全与最小自愈闭环。
+
+---
+
 ## 推进顺序
 
 ```
@@ -301,9 +388,14 @@ practice-projects/00-evaluation-infra/
 第三轮：项目 B（内容创作团队）
   → 掌握多 Agent 协作和 SOP，填坑 B1-B7
   → 项目 E 加入安全护栏
+  → 若质量不稳定，停止继续堆流程补丁，转入方法论复盘
 
-第四轮：项目 D（自愈运维）
-  → 攻克代码执行安全和自愈循环，填坑 D1-D7
+插入阶段：方法论复盘
+  → 总结项目 B 的失败模式、不可复现样本和事实核查缺口
+  → 建立 Agent 设计检查表，把经验转成项目 D-lite 的安全边界
+
+第四轮：项目 D-lite（代码执行安全与自愈最小实验）
+  → 只做安全执行、错误分类、有限轮修复和客观验证，填坑 D1-D11
   → 项目 E 完善注入防御
 
 全程：项目 E 随 A→D 逐步生长
@@ -313,7 +405,8 @@ practice-projects/00-evaluation-infra/
 - A（知识库）和 C（任务循环）的耦合最低，可独立启动
 - C 涉及的 Checkpoint 是分布式基础，早学早受益
 - B（多 Agent）复杂度最高，放在中间趁手热
-- D（自愈）需要 Docker + AST + AutoGen，环境搭好后放最后
+- B 后插入复盘，是因为多 Agent 实验已经暴露出角色边界、事实核查、评估和可解释性问题；这些问题必须先消化，再进入代码执行场景
+- D-lite 涉及代码执行安全，必须在方法论和安全边界更清楚后再做；完整通用运维自愈不纳入当前实践范围
 
 ---
 
@@ -354,9 +447,10 @@ python main.py
 | A 知识库问答 | 2-3 周 | 数据工程 + 检索质量 |
 | C 自主调研 | 2-3 周 | 任务循环 + Checkpoint |
 | B 内容创作团队 | 2-3 周 | 多 Agent 协作 + SOP |
-| D 自愈运维 | 2-3 周 | 沙箱安全 + 自愈循环 |
+| 方法论复盘 | 3-5 天 | 失败模式沉淀 + 设计检查表 |
+| D-lite 代码执行安全与自愈 | 1 周 | 安全执行 + 错误分类 + 最小自愈闭环 |
 | E 评估基础设施 | 随 A-D 生长 | 每个项目 +2 天 |
-| **合计** | **10-14 周** | 全部坑位覆盖 |
+| **合计** | **9-13 周** | 全部核心坑位覆盖 + 方法论沉淀 |
 
 ---
 

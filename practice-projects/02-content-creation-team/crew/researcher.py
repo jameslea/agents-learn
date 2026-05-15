@@ -1,9 +1,16 @@
 import os
+import sys
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from common.llm_factory import build_llm, resolve_provider_config
 
 from content_research.material_processing import finalize_research_material
 from content_research.prompts import (
@@ -38,15 +45,14 @@ class Researcher:
 
     def _build_llm(self):
         """初始化 Researcher 使用的 JSON LLM。"""
-        model_name = os.getenv("MODEL_NAME", "deepseek-chat")
-        base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
-        logger.info("加载 Researcher LLM: model=%s base_url=%s", model_name, base_url)
-        return ChatOpenAI(
-            model=model_name,
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=base_url,
-            model_kwargs={"response_format": {"type": "json_object"}},
+        provider_config = resolve_provider_config()
+        logger.info(
+            "加载 Researcher LLM: provider=%s model=%s base_url=%s",
+            provider_config.name,
+            provider_config.model,
+            provider_config.base_url,
         )
+        return build_llm(json_mode=True)
 
     def _build_search_tool(self):
         """初始化 Researcher 使用的联网搜索工具。"""

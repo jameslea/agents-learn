@@ -27,7 +27,7 @@ from llama_index.core import (
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.openai_like import OpenAILike
+from common.llm_factory import build_llamaindex_llm
 from dotenv import load_dotenv
 
 # 计算导入耗时
@@ -45,7 +45,7 @@ logger.info(f"[数据摄入] 模块加载完成，耗时: {import_duration:.2f} 
 - ChromaVectorStore: 将 ChromaDB 适配为 LlamaIndex 的向量存储引擎。
 - SentenceSplitter: 文本切分器，按句子边界将文档拆分为固定大小的块。
 - HuggingFaceEmbedding: 封装了 HuggingFace 上的开源向量模型。
-- OpenAILike: 兼容 OpenAI API 格式的 LLM 封装类，适用于对接 DeepSeek 等第三方服务。
+- build_llamaindex_llm: 仓库统一 LLM 工厂，适用于 DeepSeek / OpenAI / MiniMax 等 OpenAI-compatible 服务。
 """
 
 # 加载环境变量 (.env 文件)，包含 API Key 和基础配置
@@ -63,13 +63,8 @@ def setup_settings():
     # BAAI/bge-small-zh-v1.5 是一个轻量且强大的中文向量模型，适合本地运行
     Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-zh-v1.5")
     
-    # 2. 配置 LLM：对接兼容 OpenAI 接口的服务 (如 DeepSeek)
-    Settings.llm = OpenAILike(
-        model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        api_base=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
-        is_chat_model=True
-    )
+    # 2. 配置 LLM：对接统一 OpenAI-compatible provider 配置
+    Settings.llm = build_llamaindex_llm()
 
 def ingest_documents():
     """

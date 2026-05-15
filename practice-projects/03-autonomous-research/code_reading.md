@@ -35,7 +35,7 @@
 
 #### 🧠 `task_generator.py` (规划师 / Planner)
 *   **代码意图**：实现我们在上一节提到的 **Plan and Execute** 模式中的 **Plan** 部分。
-*   **核心逻辑**：通过 LangChain 的 `.with_structured_output(TaskPlan)`，强迫大模型按我们要求的格式（JSON）输出拆解好的任务列表，而不是输出一堆啰嗦的自然语言。
+*   **核心逻辑**：优先通过 LangChain 的 `.with_structured_output(TaskPlan)` 获取强类型任务计划；当 provider 不支持 JSON mode 时，退回到 Prompt JSON 约束和本地解析兜底。
 
 #### 🛠️ `task_executor.py` (打工人 / Executor)
 *   **代码意图**：负责调用联网工具，同时保护您有限的免费 API 额度。

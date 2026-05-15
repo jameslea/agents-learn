@@ -14,7 +14,7 @@
 | **向量数据库** | **ChromaDB** | 本地高性能向量存储，支持元数据过滤与索引持久化。 |
 | **Embedding 模型** | **BAAI/bge-small-zh-v1.5** | 本地运行的中文嵌入模型，在 HuggingFace C-MTEB 榜单表现优异，检索精度高。 |
 | **Reranker 模型** | **BAAI/bge-reranker-base** | Cross-Encoder 架构，对粗排结果进行二次语义打分，大幅提升 top-1 准确率。 |
-| **大语言模型 (LLM)** | **DeepSeek-V3 / R1** | 通过 OpenAI 兼容接口接入，负责最终的答案合成与推理。 |
+| **大语言模型 (LLM)** | **DeepSeek / OpenAI / MiniMax / custom** | 通过统一 OpenAI-compatible 工厂接入，负责最终的答案合成与推理。 |
 | **切分策略** | **SentenceSplitter** | 智能句子边界切分，设置 `chunk_size=512`，确保语义块的完整性。 |
 | **可观测性** | **LlamaDebugHandler** | 记录并打印检索、重排、生成各环节的耗时，辅助性能优化。 |
 
@@ -56,7 +56,7 @@ practice-projects/01-knowledge-base-qa/
 | **A4** | 质量盲区 | 无法量化 RAG 表现 | 缺乏端到端度量基准 | 接入 **00-evaluation-infra** 自动化评分 | ✅ |
 
 ## 运行方式
-1. **环境配置**：复制 `.env.example` (若有) 并填写 `OPENAI_API_KEY` (DeepSeek) 和 `OPENAI_BASE_URL`。
+1. **环境配置**：复制 `.env.example` 并填写 `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY`；DeepSeek/MiniMax 可分别使用 `DEEPSEEK_API_KEY`、`MINIMAX_API_KEY`。
 2. **数据处理**：运行 `python ingestion.py` 构建并持久化索引。
 3. **性能测试**：运行 `python query_engine.py` 查看单次查询的各环节耗时。
 4. **效果评估**：运行 `python evaluate.py` 获取系统忠实度 (Faithfulness) 与相关性 (Relevance) 评分。

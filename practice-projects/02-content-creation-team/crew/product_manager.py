@@ -1,7 +1,14 @@
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from common.llm_factory import build_llm, resolve_provider_config
 from sop_artifacts import ContentOutline
 from utils.cost_utils import tracked_call
 from utils.json_utils import parse_llm_json
@@ -29,15 +36,14 @@ DEFAULT_OUTLINE_TOP_N = 1
 
 class ProductManager:
     def __init__(self):
-        model = os.getenv("MODEL_NAME", "deepseek-chat")
-        base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
-        logger.info("加载 ProductManager LLM: model=%s base_url=%s", model, base_url)
-        self.llm = ChatOpenAI(
-            model=model,
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=base_url,
-            model_kwargs={"response_format": {"type": "json_object"}}
+        provider_config = resolve_provider_config()
+        logger.info(
+            "加载 ProductManager LLM: provider=%s model=%s base_url=%s",
+            provider_config.name,
+            provider_config.model,
+            provider_config.base_url,
         )
+        self.llm = build_llm(json_mode=True)
 
     def plan_content(self, topic: str) -> ContentOutline:
         """根据主题规划内容大纲"""

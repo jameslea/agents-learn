@@ -1,7 +1,8 @@
 import logging
+import json
 from typing import List, Tuple
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from common.llm_factory import build_llm, resolve_provider_config
 from pydantic import BaseModel, Field
 
 # 尝试引入本地类型
@@ -19,21 +20,50 @@ class ReflectionResult(BaseModel):
     new_tasks: List[ResearchTask] = Field(default_factory=list, description="如果发现知识盲区，需要补充的新任务（最多2个）")
     is_goal_achieved: bool = Field(default=False, description="终极目标是否已经达成")
 
+
+def _parse_reflection_result(result) -> ReflectionResult:
+    """兼容原生结构化输出和不支持 JSON mode 的 OpenAI-compatible provider。"""
+    if isinstance(result, ReflectionResult):
+        return result
+
+    content = getattr(result, "content", result)
+    if isinstance(content, ReflectionResult):
+        return content
+    if not isinstance(content, str):
+        return ReflectionResult.model_validate(content)
+
+    try:
+        return ReflectionResult.model_validate_json(content)
+    except Exception:
+        start = content.find("{")
+        end = content.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise
+        return ReflectionResult.model_validate(json.loads(content[start : end + 1]))
+
 class Reflector:
     """
     负责对 Executor 获取的数据进行反思（Reflection）。
     这是解决坑位 C6 (上下文超载) 和 C7 (盲目轻信) 的核心。
     """
     def __init__(self, llm=None):
-        import os
         from dotenv import load_dotenv
         load_dotenv()
-        
-        self.llm = llm or ChatOpenAI(
-            model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
-        ).with_structured_output(ReflectionResult, method="json_mode")
+
+        provider_config = resolve_provider_config()
+        if llm is not None:
+            self.llm = llm
+            self.structured_output = False
+        elif provider_config.supports_json_mode:
+            self.llm = build_llm(json_mode=True).with_structured_output(ReflectionResult, method="json_mode")
+            self.structured_output = True
+        else:
+            logger.info(
+                "Provider %s 不声明支持 JSON mode，Reflector 使用 Prompt JSON + 本地解析兜底。",
+                provider_config.name,
+            )
+            self.llm = build_llm(json_mode=False)
+            self.structured_output = False
 
     def reflect(self, goal: str, task_desc: str, raw_data: str) -> ReflectionResult:
         """
@@ -72,6 +102,7 @@ class Reflector:
         
         try:
             result = chain.invoke({"goal": goal, "task_desc": task_desc, "raw_data": raw_data})
+            result = result if self.structured_output else _parse_reflection_result(result)
             if result.is_useful:
                 logger.info(f"💡 发现有价值信息: {result.summary[:50]}...")
             else:

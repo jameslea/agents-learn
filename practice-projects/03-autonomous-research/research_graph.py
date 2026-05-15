@@ -130,15 +130,10 @@ def node_generate_report(state: GraphState) -> dict:
     
     logger.info("📝 正在撰写最终报告...")
     
-    # 这里简单使用 ChatOpenAI 生成报告，不再单独封装类
-    from langchain_openai import ChatOpenAI
     from langchain_core.prompts import ChatPromptTemplate
+    from common.llm_factory import build_llm
     
-    llm = ChatOpenAI(
-        model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
-    )
+    llm = build_llm()
     
     prompt = ChatPromptTemplate.from_template("""
 你是一位首席行业分析师。

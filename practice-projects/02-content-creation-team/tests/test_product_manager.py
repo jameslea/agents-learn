@@ -138,13 +138,13 @@ class ProductManagerTests(unittest.TestCase):
         }
         """
 
-        with patch("crew.product_manager.ChatOpenAI") as chat_openai:
-            chat_openai.return_value.invoke.side_effect = [shallow_response, good_response]
+        with patch("crew.product_manager.build_llm") as build_llm:
+            build_llm.return_value.invoke.side_effect = [shallow_response, good_response]
             pm = ProductManager()
             outline = pm.plan_content("测试主题")
 
         self.assertEqual(len(outline.sections), 9)
-        self.assertEqual(chat_openai.return_value.invoke.call_count, 2)
+        self.assertEqual(build_llm.return_value.invoke.call_count, 2)
 
     def test_plan_outline_candidates_returns_llm_judge_default_choice(self):
         first_response = Mock()
@@ -185,11 +185,11 @@ class ProductManagerTests(unittest.TestCase):
         }
         """
 
-        with patch("crew.product_manager.ChatOpenAI") as chat_openai, patch(
+        with patch("crew.product_manager.build_llm") as build_llm, patch(
             "crew.product_manager.judge_outline_candidates",
             side_effect=lambda topic, metrics: FakeJudge().judge(topic, metrics),
         ):
-            chat_openai.return_value.invoke.side_effect = [first_response, second_response]
+            build_llm.return_value.invoke.side_effect = [first_response, second_response]
             pm = ProductManager()
             outline, candidates, metrics, judge = pm.plan_outline_candidates(
                 "测试主题",

@@ -1,0 +1,4 @@
+traces/
+workspaces/
+__pycache__/
+*.pyc

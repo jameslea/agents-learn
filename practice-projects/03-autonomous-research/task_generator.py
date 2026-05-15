@@ -1,8 +1,8 @@
 import logging
 import json
 from typing import List
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from common.llm_factory import build_llm, resolve_provider_config
 from pydantic import BaseModel, Field
 
 # 尝试从本项目中引入
@@ -17,22 +17,50 @@ class TaskPlan(BaseModel):
     """用于大模型输出结构化的任务计划"""
     tasks: List[ResearchTask] = Field(description="为达成目标所需要执行的子任务列表")
 
+
+def _parse_task_plan(result) -> TaskPlan:
+    """兼容原生结构化输出和不支持 JSON mode 的 OpenAI-compatible provider。"""
+    if isinstance(result, TaskPlan):
+        return result
+
+    content = getattr(result, "content", result)
+    if isinstance(content, TaskPlan):
+        return content
+    if not isinstance(content, str):
+        return TaskPlan.model_validate(content)
+
+    try:
+        return TaskPlan.model_validate_json(content)
+    except Exception:
+        start = content.find("{")
+        end = content.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise
+        return TaskPlan.model_validate(json.loads(content[start : end + 1]))
+
 class TaskGenerator:
     """
     负责将用户最初的宏大目标拆解为 3-5 个可执行的子任务。
     并赋予合理的依赖关系和优先级。
     """
     def __init__(self, llm=None):
-        import os
         from dotenv import load_dotenv
         load_dotenv()
-        
-        # 默认使用 DeepSeek
-        self.llm = llm or ChatOpenAI(
-            model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
-        ).with_structured_output(TaskPlan, method="json_mode")
+
+        provider_config = resolve_provider_config()
+        if llm is not None:
+            self.llm = llm
+            self.structured_output = False
+        elif provider_config.supports_json_mode:
+            self.llm = build_llm(json_mode=True).with_structured_output(TaskPlan, method="json_mode")
+            self.structured_output = True
+        else:
+            logger.info(
+                "Provider %s 不声明支持 JSON mode，TaskGenerator 使用 Prompt JSON + 本地解析兜底。",
+                provider_config.name,
+            )
+            self.llm = build_llm(json_mode=False)
+            self.structured_output = False
 
     def generate_initial_tasks(self, goal: str) -> List[ResearchTask]:
         """
@@ -60,7 +88,8 @@ class TaskGenerator:
         
         try:
             result = chain.invoke({"goal": goal})
-            tasks = result.tasks
+            task_plan = result if self.structured_output else _parse_task_plan(result)
+            tasks = task_plan.tasks
             logger.info(f"✅ 成功拆解出 {len(tasks)} 个子任务")
             for t in tasks:
                 logger.info(f"  - [优先级 {t.priority}] {t.description}")

@@ -19,8 +19,8 @@ import chromadb
 from llama_index.core import VectorStoreIndex, StorageContext, Settings
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.openai_like import OpenAILike
 from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
+from common.llm_factory import build_llamaindex_llm
 from dotenv import load_dotenv
 
 # 计算导入耗时
@@ -35,7 +35,7 @@ logger.info(f"[查询引擎] 模块加载完成，耗时: {import_duration:.2f} 
 - Settings: 全局模型配置（LLM 和 Embedding）。
 - ChromaVectorStore: 连接 LlamaIndex 与 ChromaDB 的适配器。
 - HuggingFaceEmbedding: 本地向量化模型封装。
-- OpenAILike: 兼容 OpenAI 协议的 LLM 接口。
+- build_llamaindex_llm: 仓库统一 LLM 工厂，适用于 DeepSeek / OpenAI / MiniMax 等 OpenAI-compatible 服务。
 """
 
 # 加载环境变量
@@ -56,12 +56,7 @@ def setup_settings():
                 return handler
 
     Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-zh-v1.5")
-    Settings.llm = OpenAILike(
-        model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        api_base=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
-        is_chat_model=True
-    )
+    Settings.llm = build_llamaindex_llm()
     
     # 添加可观测性组件：用于记录各环节耗时
     llama_debug = LlamaDebugHandler(print_trace_on_end=False)

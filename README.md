@@ -95,8 +95,8 @@ pip install -r requirements/base.txt
 
 ### 3. 配置环境变量
 复制 `.env.example` 为 `.env` 并填入：
-- `OPENAI_API_KEY` / `OPENAI_BASE_URL`
-- `MODEL_NAME` (推荐 `deepseek-chat`)
+- `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY`
+- DeepSeek 可使用 `DEEPSEEK_API_KEY`，MiniMax 可使用 `MINIMAX_API_KEY`
 - `TAVILY_API_KEY` (搜索功能必需)
 
 ---

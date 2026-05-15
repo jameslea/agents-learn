@@ -47,8 +47,8 @@ class ReviewerTests(unittest.TestCase):
         }
         """
 
-        with patch("crew.reviewer.ChatOpenAI") as chat_openai:
-            chat_openai.return_value.invoke.return_value = response
+        with patch("crew.reviewer.build_llm") as build_llm:
+            build_llm.return_value.invoke.return_value = response
             reviewer = Reviewer()
             feedback = reviewer.review_draft(draft)
 

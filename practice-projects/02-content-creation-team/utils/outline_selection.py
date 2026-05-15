@@ -1,10 +1,17 @@
 """Outline candidate ranking and editorial judging helpers."""
 import json
 import os
+import sys
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from common.llm_factory import build_llm, resolve_provider_config
 from pydantic import BaseModel, Field
 
 from utils.cost_utils import tracked_call
@@ -33,15 +40,14 @@ class OutlineJudgeResult(BaseModel):
 
 class OutlineJudge:
     def __init__(self):
-        model = os.getenv("MODEL_NAME", "deepseek-chat")
-        base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
-        logger.info("加载 OutlineJudge LLM: model=%s base_url=%s", model, base_url)
-        self.llm = ChatOpenAI(
-            model=model,
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=base_url,
-            model_kwargs={"response_format": {"type": "json_object"}},
+        provider_config = resolve_provider_config()
+        logger.info(
+            "加载 OutlineJudge LLM: provider=%s model=%s base_url=%s",
+            provider_config.name,
+            provider_config.model,
+            provider_config.base_url,
         )
+        self.llm = build_llm(json_mode=True)
 
     def judge(self, topic: str, metrics: list[OutlineQualityMetrics]) -> OutlineJudgeResult:
         """让 LLM 以主编视角评估候选大纲，不改写大纲。"""
@@ -158,4 +164,3 @@ def build_outline_judge_prompt(topic: str, metrics: list[OutlineQualityMetrics])
         '  "selection_reason": "最终选择理由"\n'
         "}"
     )
-

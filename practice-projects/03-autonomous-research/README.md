@@ -22,6 +22,7 @@
 
 ## 运行方式
 确保已经配置 `.env` 并在虚拟环境中安装了依赖。
+LLM 配置统一使用 `.env.example` 中的 `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY`；MiniMax 可设置 `LLM_PROVIDER=minimax` 和 `MINIMAX_API_KEY`。
 
 ```bash
 # 运行默认任务（thread_id 默认为 research_demo_01）
@@ -34,7 +35,7 @@ python practice-projects/03-autonomous-research/research_graph.py my_custom_task
 ## 踩坑记录
 1. **Pydantic 验证错误与大模型输出不一致**
    - **现象**：`Reflector` 返回的 JSON 键是 `task`，但 Pydantic 模型需要 `description`，导致 Pydantic 严重验证报错。
-   - **解决**：在 Prompt 中必须显式、逐字段地提供合法的 JSON Schema 要求。同时针对 DeepSeek，开启 `response_format={"type": "json_object"}` 强制返回 JSON。
+   - **解决**：在 Prompt 中必须显式、逐字段地提供合法的 JSON Schema 要求。对支持 JSON mode 的 provider 开启 `response_format={"type": "json_object"}`；对 MiniMax 等接口使用 Prompt JSON 约束和本地解析兜底。
 
 2. **LangGraph 字典覆盖陷阱 (Reducer Issue)**
    - **现象**：使用原生的 `dict` 作为 `StateGraph` 时，节点返回的局部更新覆盖了全量字段（例如导致 `original_goal` 丢失）。

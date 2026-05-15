@@ -2,6 +2,7 @@ import os
 import json
 from typing import List
 from openai import OpenAI
+from common.llm_factory import resolve_provider_config
 from .metrics import EvalResult
 from dotenv import load_dotenv
 
@@ -28,13 +29,38 @@ class LLMJudge:
         初始化 OpenAI 客户端。
         优先读取环境变量中的配置。
         """
-        api_key = os.getenv("OPENAI_API_KEY")
-        # 兼容不同的 API 基础路径设置
-        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE") or "https://api.openai.com/v1"
-        self.model = model or os.getenv("MODEL_NAME") or "gpt-4o"
+        provider_config = resolve_provider_config(model_name=model)
+        self.model = provider_config.model
+        self.supports_json_mode = provider_config.supports_json_mode
         
-        logger.info(f"LLM Judge 初始化: Model={self.model}, BaseURL={base_url}")
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        logger.info(
+            "LLM Judge 初始化: Provider=%s Model=%s BaseURL=%s",
+            provider_config.name,
+            self.model,
+            provider_config.base_url,
+        )
+        self.client = OpenAI(api_key=provider_config.api_key, base_url=provider_config.base_url)
+
+    def _chat_json(self, prompt: str):
+        request = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if self.supports_json_mode:
+            request["response_format"] = {"type": "json_object"}
+        return self.client.chat.completions.create(**request)
+
+    def _parse_eval_result(self, content: str | None) -> EvalResult:
+        if not content:
+            raise json.JSONDecodeError("empty response", "", 0)
+        try:
+            return EvalResult(**json.loads(content))
+        except json.JSONDecodeError:
+            start = content.find("{")
+            end = content.rfind("}")
+            if start == -1 or end == -1 or end <= start:
+                raise
+            return EvalResult(**json.loads(content[start : end + 1]))
 
     def evaluate_faithfulness(self, context: str, answer: str) -> EvalResult:
         """
@@ -59,15 +85,10 @@ class LLMJudge:
             "reasoning": "简短的评估理由"
         }}
         """
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"} # 强制输出 JSON
-        )
+        response = self._chat_json(prompt)
         content = response.choices[0].message.content
         try:
-            res = json.loads(content)
-            return EvalResult(**res)
+            return self._parse_eval_result(content)
         except json.JSONDecodeError as e:
             logger.error(f"JSON 解析失败！原始响应内容: {content}")
             return EvalResult(score=0.0, reasoning=f"JSON 解析失败: {str(e)}")
@@ -94,15 +115,10 @@ class LLMJudge:
             "reasoning": "简短的评估理由"
         }}
         """
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
+        response = self._chat_json(prompt)
         content = response.choices[0].message.content
         try:
-            res = json.loads(content)
-            return EvalResult(**res)
+            return self._parse_eval_result(content)
         except json.JSONDecodeError as e:
             logger.error(f"JSON 解析失败！原始响应内容: {content}")
             return EvalResult(score=0.0, reasoning=f"JSON 解析失败: {str(e)}")
