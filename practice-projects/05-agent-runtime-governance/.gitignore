@@ -1,0 +1,13 @@
+reports/*.json
+reports/*.md
+reports/**/*.json
+reports/**/*.md
+traces/*.jsonl
+traces/**/*.jsonl
+state/*.json
+state/*.lock
+state/**/*.json
+state/**/*.lock
+manifests/*.json
+manifests/**/*.json
+artifacts/**

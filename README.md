@@ -107,6 +107,9 @@ pip install -r requirements/base.txt
 - [**docs/plan2.md**](./docs/plan2.md)：本项目背后的设计心路历程与架构演进图谱。
 - [**docs/from-learning-to-production.md**](./docs/from-learning-to-production.md)：从学习到实战的落地行动框架——场景选型、五道坎、分阶段推进。
 - [**docs/practice-projects-plan.md**](./docs/practice-projects-plan.md)：五场景实战项目矩阵——35 个坑位驱动的全覆盖练兵计划。
+- [**docs/agent-runtime-governance-development-plan.md**](./docs/agent-runtime-governance-development-plan.md)：项目 E 重新定位后的 Agent Runtime & Governance Lab 开发计划。
+- [**docs/agent-runtime-governance-stage-summary.md**](./docs/agent-runtime-governance-stage-summary.md)：项目 E MVP 阶段总结——已实现能力、目标对齐、设计取舍和后续建议。
+- [**docs/agent-runtime-governance-mvp-closure.md**](./docs/agent-runtime-governance-mvp-closure.md)：项目 E MVP 收束记录——阶段边界、验收命令、已知风险和后续分支。
 - **核心概念 (Core Concepts)**：
     - [Reranker 深度选型](./docs/concepts/reranker-deep-dive.md)
     - [模型运行时工程化](./docs/concepts/model-runtime-and-engineering.md)
