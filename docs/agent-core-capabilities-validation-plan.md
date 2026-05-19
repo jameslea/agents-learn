@@ -82,7 +82,7 @@ Model + Tools + Orchestration
 | 阶段 | 能力 | 状态 | 产出 | 验证 | 记录 |
 |------|------|------|------|------|------|
 | 1 | Context Builder | completed | 见阶段 1 明细 | 见阶段 1 明细 | 已记录核心概念和经验教训 |
-| 2 | Memory / State 分层 | pending | 待补充 | 待补充 | 待补充 |
+| 2 | Memory / State 分层 | completed | 见阶段 2 明细 | 见阶段 2 明细 | 已记录核心概念和经验教训 |
 | 3 | Checkpoint / Resume | pending | 待补充 | 待补充 | 待补充 |
 | 4 | Schema Artifact 交接 | pending | 待补充 | 待补充 | 待补充 |
 | 5 | Trace 与复盘 | pending | 待补充 | 待补充 | 待补充 |
@@ -117,7 +117,7 @@ Model + Tools + Orchestration
 | 上下文怎么选 | 阶段 1：Context Builder | 按目标、step、artifact、memory 和 trace summary 构造 `ContextBundle` |
 | 上下文怎么压缩 | 阶段 1：Context Builder | 最近 step 摘要、artifact 引用、trace 摘要，不直接塞完整历史 |
 | 上下文怎么防污染 | 阶段 1、阶段 2 | 只选择相关 memory / artifact，并区分有效状态、过期记忆和原始 trace |
-| 记忆怎么保存 | 阶段 2：Memory / State 分层 | 使用 `MemoryRecord`，和 `RuntimeState`、`Artifact` 分开保存 |
+| 记忆怎么保存 | 阶段 2：Memory / State 分层 | 使用 `MemoryRecord`，和 `RuntimeState`、`ArtifactRecord` 分开保存 |
 | 记忆怎么验证 | 阶段 2、阶段 6 | 给 memory 增加来源、scope、tag、confidence 和验证状态 |
 | 记忆怎么过期 | 阶段 2 | 给 memory 增加时间、版本、有效范围和失效规则 |
 | 状态怎么 checkpoint / resume | 阶段 3 | step 状态、checkpoint 文件或 SQLite、resume 脚本 |
@@ -221,7 +221,7 @@ practice-projects/06-agent-runtime-core/
 
 - `RuntimeState`：当前任务进度。
 - `MemoryRecord`：跨任务经验。
-- `Artifact`：任务内或跨任务可引用产物。
+- `ArtifactRecord`：任务内或跨任务可引用产物。
 
 样例数据：
 
@@ -233,7 +233,7 @@ practice-projects/06-agent-runtime-core/
 
 验收标准：
 
-- 三类数据能分别保存和读取。
+- 三类数据能分别创建、读取和传递。本阶段不实现持久化 store。
 - context builder 能按需引用它们。
 - 文档中说明三者边界，避免混用。
 
@@ -394,7 +394,7 @@ research_mini：
 建议顺序：
 
 1. 先实现 `ContextBundle` 和 `ContextBuilder`。
-2. 再明确 `RuntimeState`、`MemoryRecord`、`Artifact` 的边界。
+2. 再明确 `RuntimeState`、`MemoryRecord`、`ArtifactRecord` 的边界。
 3. 增加 checkpoint / resume。
 4. 增加 schema artifact handoff。
 5. 增加 trace event 和 trace summary。
@@ -448,7 +448,7 @@ research_mini：
 | 阶段 | 状态 | 最近更新 | 记录 |
 |------|------|----------|------|
 | 1 | completed | 2026-05-19 | 已完成 Context Builder 最小验证，新增结构化 `ContextBundle`、候选筛选规则、demo 和测试 |
-| 2 | pending | 2026-05-19 | 尚未开始 |
+| 2 | completed | 2026-05-19 | 已完成 Memory / State 分层和轻量记忆机制验证，新增 `MemoryRecord`、`MemoryWriteGate`、`MemoryStore`、`ArtifactRecord`、demo 和边界测试 |
 | 3 | pending | 2026-05-19 | 尚未开始 |
 | 4 | pending | 2026-05-19 | 尚未开始 |
 | 5 | pending | 2026-05-19 | 尚未开始 |
@@ -480,4 +480,43 @@ research_mini：
   - Context metrics 可以让上下文工程从“看最终 prompt”变成“观察选择过程和预算使用”。
   - Stage 1 暂不实现向量检索、LLM 压缩和长期 memory store，避免第一步过度复杂化。
   - Python 项目不必机械采用 Java 式“一类一文件”，但也不应把 enum、model、policy、selector、budget、builder 都长期堆在一个模块中；更合理的粒度是按概念职责拆分，例如 source、candidate、policy、selection、output、budget、builder。
-- 后续调整：阶段 2 应把当前临时 `MemoryCandidate` 演进为独立 `MemoryRecord`，并进一步区分 project memory、task state 和 artifact。
+- 后续调整：阶段 2 已把当前临时 `MemoryCandidate` 演进为独立 `MemoryRecord`，并进一步区分 project memory、task state 和 artifact。
+
+### 阶段 2：Memory / State 分层
+
+- 状态：completed
+- 完成日期：2026-05-19
+- 代码根目录：`practice-projects/06-agent-runtime-core/`
+- 相对文件：
+  - `runtime_core/memory.py`
+  - `runtime_core/artifact.py`
+  - `runtime_core/context.py`
+  - `runtime_core/state.py`
+  - `scripts/run_memory_state_demo.py`
+  - `tests/test_memory_state_boundaries.py`
+- 验证命令：
+  - `python3 practice-projects/06-agent-runtime-core/scripts/run_memory_state_demo.py`
+  - `python3 -m pytest practice-projects/06-agent-runtime-core/tests`
+- 关键产物：`MemoryRecord`、`MemoryWriteProposal`、`MemoryWriteGate`、`MemoryWriteDecision`、内存版 `MemoryStore`、`MemoryQuery`、`MemorySearchResult`、`ArtifactRecord`、`RuntimeState` 边界说明、正式记录接入 Context Builder。
+- 核心概念：
+  - Memory 是跨任务可复用经验，不是当前任务执行状态。
+  - 记忆写入必须经过 gate，先判断复用价值、来源可信度、敏感性、tags、evidence 和 confidence。
+  - MemoryStore 管理记忆生命周期，至少应覆盖提出、验证、检索、失效和替换；当前实现是进程内内存 store，不做持久化。
+  - State 是当前任务执行进度，只保存 step、短摘要、artifact id 引用和少量 runtime values。
+  - Artifact 是可验证、可交接的结构化产物，Context Builder 默认只引用 summary / path / schema。
+  - Context Builder 可以接入正式 `MemoryRecord` 和 `ArtifactRecord`，但仍通过候选转换和选择规则治理。
+- 经验教训：
+  - 先划清边界，再补轻量 memory store，比直接做复杂记忆系统更稳。
+  - 记忆写入时机不能缺失；没有 write gate 时，Agent 容易把临时状态、错误推断或外部污染写成长久记忆。
+  - MemoryStore 应先完成记忆写入、验证、检索排序、失效和替换，再把结果交给 Context Builder；持久化可以后续替换 store 实现，不应污染 `MemoryRecord` 边界。
+  - Artifact 可以有完整 payload，但上下文中默认不读取 payload，避免上下文膨胀。
+  - Memory 即使是正式记录，也必须保留 validated、confidence、expires_at、scope、tags 等治理元数据。
+  - 保留 `MemoryCandidate` 和 `ArtifactCandidate` 有助于兼容阶段 1，但后续应逐步将正式模型作为主入口。
+- 后续调整：阶段 3 可以基于 `RuntimeState` 增加 checkpoint / resume；阶段 4 可以继续强化 `ArtifactRecord` 的 schema 验证和交接能力。
+- 记忆系统后续增强清单：
+  - 持久化 store：与 checkpoint / trace store 统一设计后再做。
+  - 冲突和重复检测：记忆样本增多后再补，避免记忆膨胀和规则矛盾。
+  - 审计日志：和 trace 阶段一起记录 memory 写入、验证、替换和失效过程。
+  - 权限、隔离和敏感信息治理：接入真实多用户或多项目场景时补充。
+  - 语义检索和自动记忆抽取：放在后续阶段，且必须经过 write gate 和验证流程。
+  - 记忆效果评估：和 eval / trace 体系结合，判断 memory 是否真正提升任务质量。

@@ -41,7 +41,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from runtime_core.artifact import ArtifactRecord
 from runtime_core.contracts import TaskContract
+from runtime_core.memory import MemoryRecord
 from runtime_core.state import RuntimeState, StepExecution, StepStatus
 
 
@@ -229,7 +231,8 @@ class ArtifactCandidate(BaseModel):
 class MemoryCandidate(BaseModel):
     """可供 ContextBuilder 选择的 memory 摘要候选。
 
-    当前它只是阶段 1 的轻量模型。阶段 2 会演进为正式 `MemoryRecord`。
+    当前保留它是为了兼容阶段 1 demo 和测试。阶段 2 起，正式记忆模型是
+    `runtime_core.memory.MemoryRecord`。
     """
 
     memory_id: str = Field(description="memory 唯一标识。")
@@ -304,8 +307,8 @@ class ContextBuilder:
         step_id: str,
         current_step: str,
         step_tags: list[str] | None = None,
-        artifacts: list[ArtifactCandidate] | None = None,
-        memories: list[MemoryCandidate] | None = None,
+        artifacts: list[ArtifactCandidate | ArtifactRecord] | None = None,
+        memories: list[MemoryCandidate | MemoryRecord] | None = None,
         candidates: list[ContextCandidate] | None = None,
         trace_summary: str = "",
         policy: ContextPolicy | None = None,
@@ -496,8 +499,8 @@ class ContextBuilder:
         self,
         *,
         contract: TaskContract,
-        artifacts: list[ArtifactCandidate],
-        memories: list[MemoryCandidate],
+        artifacts: list[ArtifactCandidate | ArtifactRecord],
+        memories: list[MemoryCandidate | MemoryRecord],
         candidates: list[ContextCandidate],
         trace_summary: str,
         policy: ContextPolicy,
@@ -510,42 +513,48 @@ class ContextBuilder:
         collected = list(candidates)
 
         # Artifact 默认只暴露摘要和引用元数据，不在 ContextBuilder 阶段读取完整正文。
-        collected.extend(
-            ContextCandidate(
-                source_type=ContextSourceType.ARTIFACT_REF,
-                source_id=artifact.artifact_id,
-                title=f"Artifact: {artifact.title}",
-                content=artifact.summary,
-                tags=artifact.tags,
-                visibility=artifact.visibility,
-                trust_level=artifact.trust_level,
-                sensitive=artifact.sensitive,
-                artifact_type=artifact.artifact_type,
-                metadata={"path": artifact.path, **artifact.metadata},
+        for artifact in artifacts:
+            if isinstance(artifact, ArtifactRecord):
+                collected.append(artifact.to_candidate())
+                continue
+            collected.append(
+                ContextCandidate(
+                    source_type=ContextSourceType.ARTIFACT_REF,
+                    source_id=artifact.artifact_id,
+                    title=f"Artifact: {artifact.title}",
+                    content=artifact.summary,
+                    tags=artifact.tags,
+                    visibility=artifact.visibility,
+                    trust_level=artifact.trust_level,
+                    sensitive=artifact.sensitive,
+                    artifact_type=artifact.artifact_type,
+                    metadata={"path": artifact.path, **artifact.metadata},
+                )
             )
-            for artifact in artifacts
-        )
 
-        # MemoryCandidate 当前仍是阶段 1 的轻量模型；转换为 ContextCandidate 后
-        # 会在 _select_memory() 中执行 scope、tag、confidence、expires_at 检查。
-        collected.extend(
-            ContextCandidate(
-                source_type=ContextSourceType.MEMORY,
-                source_id=memory.memory_id,
-                title=f"Memory: {memory.memory_id}",
-                content=memory.content,
-                tags=memory.tags,
-                visibility=memory.visibility,
-                trust_level=memory.trust_level,
-                sensitive=memory.sensitive,
-                scope=memory.scope,
-                confidence=memory.confidence,
-                validated=memory.validated,
-                expires_at=memory.expires_at,
-                metadata=memory.metadata,
+        # MemoryRecord 是阶段 2 的正式模型；MemoryCandidate 仅用于兼容阶段 1。
+        # 转换为 ContextCandidate 后仍统一走 _select_memory() 的治理规则。
+        for memory in memories:
+            if isinstance(memory, MemoryRecord):
+                collected.append(memory.to_candidate())
+                continue
+            collected.append(
+                ContextCandidate(
+                    source_type=ContextSourceType.MEMORY,
+                    source_id=memory.memory_id,
+                    title=f"Memory: {memory.memory_id}",
+                    content=memory.content,
+                    tags=memory.tags,
+                    visibility=memory.visibility,
+                    trust_level=memory.trust_level,
+                    sensitive=memory.sensitive,
+                    scope=memory.scope,
+                    confidence=memory.confidence,
+                    validated=memory.validated,
+                    expires_at=memory.expires_at,
+                    metadata=memory.metadata,
+                )
             )
-            for memory in memories
-        )
 
         # Trace 只允许摘要进入上下文，避免原始 trace 过长、过噪或携带敏感工具输出。
         if policy.include_trace_summary and trace_summary.strip():

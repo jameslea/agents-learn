@@ -6,6 +6,8 @@
 - contracts：任务入口契约。
 - state：任务步骤状态。
 - context：Context Builder 和 ContextBundle。
+- memory：跨任务可复用记忆。
+- artifact：结构化产物记录。
 
-后续阶段会继续加入 memory、artifact、trace 和 step runner。
+后续阶段会继续加入 checkpoint、trace 和 step runner。
 """
