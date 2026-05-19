@@ -107,6 +107,9 @@ pip install -r requirements/base.txt
 - [**docs/plan2.md**](./docs/plan2.md)：本项目背后的设计心路历程与架构演进图谱。
 - [**docs/from-learning-to-production.md**](./docs/from-learning-to-production.md)：从学习到实战的落地行动框架——场景选型、五道坎、分阶段推进。
 - [**docs/practice-projects-plan.md**](./docs/practice-projects-plan.md)：五场景实战项目矩阵——35 个坑位驱动的全覆盖练兵计划。
+- [**docs/agent-learning-final-review.md**](./docs/agent-learning-final-review.md)：Agent 学习与实践阶段综述——项目经验映射、Agent 类型覆盖和后续核心议题。
+- [**docs/agent-core-capabilities-validation-plan.md**](./docs/agent-core-capabilities-validation-plan.md)：下一阶段小步验证计划——围绕上下文、记忆、恢复、交接、trace 和最小 Runtime 做可运行实践。
+- [**practice-projects/06-agent-runtime-core**](./practice-projects/06-agent-runtime-core/)：独立 Runtime Core 小步验证项目，当前已完成 Context Builder 最小验证。
 - [**docs/agent-runtime-governance-development-plan.md**](./docs/agent-runtime-governance-development-plan.md)：项目 E 重新定位后的 Agent Runtime & Governance Lab 开发计划。
 - [**docs/agent-runtime-governance-stage-summary.md**](./docs/agent-runtime-governance-stage-summary.md)：项目 E MVP 阶段总结——已实现能力、目标对齐、设计取舍和后续建议。
 - [**docs/agent-runtime-governance-mvp-closure.md**](./docs/agent-runtime-governance-mvp-closure.md)：项目 E MVP 收束记录——阶段边界、验收命令、已知风险和后续分支。
@@ -114,7 +117,10 @@ pip install -r requirements/base.txt
     - [Reranker 深度选型](./docs/concepts/reranker-deep-dive.md)
     - [模型运行时工程化](./docs/concepts/model-runtime-and-engineering.md)
     - [Agent 设计方法论](./docs/concepts/agent-design-methodology.md)
+    - [Agent 系统核心结构](./docs/concepts/agent-core-structure.md)
+    - [Agent 从理论到实践](./docs/concepts/agent-theory-to-practice.md)
     - [Agent Runtime 哲学](./docs/concepts/agent-runtime-philosophy.md)
+    - [Agent 系统开发边界](./docs/concepts/agent-system-boundaries.md)
     - [Agent 框架与服务选型地图](./docs/concepts/agent-frameworks-and-services-landscape.md)
     - [多模态 Agent 能力地图](./docs/concepts/multimodal-agent-capabilities-landscape.md)
 
