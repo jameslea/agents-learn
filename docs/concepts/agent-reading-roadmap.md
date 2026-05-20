@@ -6,45 +6,99 @@
 
 ## 资料汇总
 
-说明：`关注主题` 表示这份资料主要帮助理解 Agent 系统中的哪类问题；`资料形态` 表示它是论文、工程文档、官方指南、白皮书还是思想文章；`重要程度` 表示当前项目后续学习时的优先级。
+说明：`资料` 列第一行是资料链接，第二行是压缩后的中文简述；`发布时间` 优先记录首次公开或发布的时间，持续维护的工程文档标为“持续更新”；`资料形态与关注主题` 使用“资料形态：关注主题”的格式；`重要程度` 表示当前项目后续学习时的优先级。
 
-| 资料 | 关注主题 | 重要程度 | 资料形态 | 中文简述 |
-|------|------|----------|------|----------|
-| [Anthropic: Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) | 工程总论 | 必读 | 工程文章 | 区分 workflow 和 agent，总结 prompt chaining、routing、parallelization、orchestrator-workers、evaluator-optimizer 等实用模式。 |
-| [OpenAI: A Practical Guide to Building Agents](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf) | 工程总论 | 必读 | 官方指南 | 从工程落地角度解释 agent、tool、handoff、guardrail、human review、trace 等核心构件。 |
-| [Kaggle / Google: Agents Whitepaper](https://www.kaggle.com/whitepaper-agents) | 核心架构 | 建议读 | 白皮书 | 用 Model、Tools、Orchestration 解释 Agent 一阶结构，适合建立总体架构坐标。 |
-| [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) | 推理与行动 | 必读 | 论文 | 提出 Thought / Action / Observation 循环，是 LLM Agent 推理与行动结合的基础范式。 |
-| [Google Research Blog: ReAct](https://research.google/blog/react-synergizing-reasoning-and-acting-in-language-models/) | 推理与行动 | 建议读 | 研究博客 | 用更易读的方式介绍 ReAct 背景、方法和实验结果。 |
-| [Toolformer: Language Models Can Teach Themselves to Use Tools](https://arxiv.org/abs/2302.04761) | 工具使用 | 必读 | 论文 | 讨论模型如何学习在合适时机调用工具，适合理解工具使用能力。 |
-| [Tree of Thoughts](https://arxiv.org/abs/2305.10601) | 规划与搜索 | 建议读 | 论文 | 将多个候选推理路径作为搜索对象，适合理解复杂任务中的搜索、打分和回溯。 |
-| [Reflexion](https://arxiv.org/abs/2303.11366) | 反思与失败学习 | 必读 | 论文 | 用语言反馈和反思记忆改进后续尝试，适合理解失败经验如何沉淀。 |
-| [Generative Agents](https://arxiv.org/abs/2304.03442) | 记忆系统 | 必读 | 论文 | 通过事件记忆、检索和反思生成可信行为，是 Agent 记忆系统的重要参考。 |
-| [Voyager](https://arxiv.org/abs/2305.16291) | 技能库与长期任务 | 必读 | 论文 | 在开放环境中持续探索并沉淀代码技能，适合理解技能库和长期自主任务。 |
-| [Voyager Project Page](https://voyager.minedojo.org/) | 技能库与长期任务 | 建议读 | 项目页 | 提供 Voyager 的项目说明、示例和补充材料。 |
-| [AutoGen](https://arxiv.org/abs/2308.08155) | 多 Agent | 建议读 | 论文 | 通过多 Agent 对话组织复杂应用，适合理解多 Agent 协作的能力和风险。 |
-| [Microsoft Research: AutoGen](https://www.microsoft.com/en-us/research/publication/autogen-enabling-next-gen-llm-applications-via-multi-agent-conversation-framework/) | 多 Agent | 可选读 | 研究页面 | AutoGen 官方研究介绍，便于了解框架背景。 |
-| [SWE-agent](https://arxiv.org/abs/2405.15793) | 软件工程 Agent | 必读 | 论文 | 提出 Agent-Computer Interface 视角，说明代码 Agent 能力强依赖环境接口设计。 |
-| [A Survey on LLM-based Autonomous Agents](https://arxiv.org/abs/2308.11432) | 自主 Agent 综述 | 进阶读 | 综述 | 系统梳理自主 Agent 的构成、应用和挑战，适合作为宏观补充阅读。 |
-| [Survey on Evaluation of LLM-based Agents](https://arxiv.org/abs/2503.16416) | 评估体系 | 进阶读 | 综述 | 梳理 Agent 评估对象、基准、方法和挑战，适合理解评估体系。 |
-| [Lost in the Middle](https://arxiv.org/abs/2307.03172) | 上下文工程 | 必读 | 论文 | 说明长上下文中间信息容易被忽略，支持 Context Builder 的必要性。 |
-| [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) | 状态与恢复 | 必读 | 工程文档 | 介绍 checkpoint、thread、resume 等持久化能力，是可恢复 Agent 的重要工程参考。 |
-| [LangChain / Deep Agents Memory](https://docs.langchain.com/oss/python/deepagents/long-term-memory) | 记忆系统 | 建议读 | 工程文档 | 说明长期记忆如何保存、读取和使用，适合对照 MemoryStore 设计。 |
-| [LangChain Memory Overview](https://docs.langchain.com/oss/python/concepts/memory) | 记忆系统 | 建议读 | 工程文档 | 解释短期记忆和长期记忆的区别，适合补充记忆概念边界。 |
-| [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/) | Trace 与观测 | 必读 | 工程文档 | 介绍 Agent run 中的 LLM、tool、handoff、guardrail 和自定义 trace 事件。 |
-| [OpenAI Agents SDK Guardrails](https://openai.github.io/openai-agents-js/guides/guardrails/) | 安全与护栏 | 必读 | 工程文档 | 介绍输入、输出和工具调用前后的安全检查与阻断机制。 |
-| [Langfuse Documentation](https://langfuse.com/docs/) | Trace 与观测 | 建议读 | 工程文档 | 介绍 LLM observability、trace、prompt、dataset 和 eval 等观测能力。 |
-| [LangSmith Documentation](https://docs.smith.langchain.com/) | Trace 与评估 | 建议读 | 工程文档 | LangChain 生态的 observability、trace、dataset 和 evaluation 平台文档。 |
-| [Arize Phoenix Documentation](https://arize.com/docs/phoenix) | Trace 与评估 | 建议读 | 工程文档 | 开源 AI observability 和 evaluation 工具，适合理解 trace、span、dataset 和实验分析。 |
-| [AgentOps Documentation](https://docs.agentops.ai/v2/usage/tracking-agents) | Agent 观测工具 | 进阶读 | 工程文档 | 面向 AI agents 的观测和调试平台，强调 agent、tool、session、cost 和 replay。 |
-| [AgentTrace: Structured Logging Framework](https://arxiv.org/abs/2602.10133) | Trace 与复盘 | 进阶读 | 论文 | 从 operational、cognitive、contextual 三个层面记录 Agent 运行轨迹，适合补充 trace 设计。 |
-| [Model Context Protocol Specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/index) | 工具协议 | 建议读 | 协议文档 | 介绍模型与外部工具、资源、服务连接的协议化思路。 |
-| [The Bitter Lesson](http://www.incompleteideas.net/IncIdeas/BitterLesson.html) | 底层思想 | 建议读 | 思想文章 | 讨论长期看通用计算和学习方法的重要性，适合校正过度手写规则的倾向。 |
-| [Software 2.0](https://karpathy.github.io/2017/11/11/software2/) | 底层思想 | 建议读 | 思想文章 | 讨论从手写逻辑到模型逻辑的软件形态变化，适合理解 Agent 与传统软件的差异。 |
-| [BDI Agent Architecture](https://learn.microsoft.com/en-us/archive/msdn-magazine/2019/january/machine-learning-leveraging-the-beliefs-desires-intentions-agent-architecture) | 传统智能体理论 | 可选读 | 经典智能体架构介绍 | 用 Belief、Desire、Intention 解释传统智能体结构，可作为现代 Agent 的概念参照。 |
+| 序号 | 资料 | 发布者 | 发布时间 | 资料形态与关注主题 | 重要程度 |
+|------|------|--------|----------|--------------------|----------|
+| 01 | [Anthropic: Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)<br>（区分 workflow 与 agent，整理常用工程模式） | Anthropic | 2024-12 | 工程文章：工程总论 | 必读 |
+| 02 | [OpenAI: A Practical Guide to Building Agents](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf)<br>（解释 tool、handoff、guardrail、trace 等工程构件） | OpenAI | 2025 | 官方指南：工程总论 | 必读 |
+| 03 | [Kaggle / Google: Agents Whitepaper](https://www.kaggle.com/whitepaper-agents)<br>（用 Model / Tools / Orchestration 建立架构坐标） | Google / Kaggle | 2024 | 白皮书：核心架构 | 建议读 |
+| 04 | [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)<br>（提出 Thought / Action / Observation 基础循环） | Princeton / Google Research | 2022-10 | 论文：推理与行动 | 必读 |
+| 05 | [Google Research Blog: ReAct](https://research.google/blog/react-synergizing-reasoning-and-acting-in-language-models/)<br>（ReAct 的背景、方法和实验介绍） | Google Research | 2022-11 | 研究博客：推理与行动 | 建议读 |
+| 06 | [Toolformer: Language Models Can Teach Themselves to Use Tools](https://arxiv.org/abs/2302.04761)<br>（理解模型何时以及如何调用工具） | Meta AI | 2023-02 | 论文：工具使用 | 必读 |
+| 07 | [Tree of Thoughts](https://arxiv.org/abs/2305.10601)<br>（把候选推理路径作为搜索对象） | Princeton / Google DeepMind | 2023-05 | 论文：规划与搜索 | 建议读 |
+| 08 | [Reflexion](https://arxiv.org/abs/2303.11366)<br>（用反馈和反思记忆改进后续尝试） | Northeastern / MIT 等 | 2023-03 | 论文：反思与失败学习 | 必读 |
+| 09 | [Generative Agents](https://arxiv.org/abs/2304.03442)<br>（事件记忆、检索和反思的经典案例） | Stanford / Google Research | 2023-04 | 论文：记忆系统 | 必读 |
+| 10 | [Voyager](https://arxiv.org/abs/2305.16291)<br>（长期探索并沉淀可复用代码技能） | NVIDIA / MineDojo 等 | 2023-05 | 论文：技能库与长期任务 | 必读 |
+| 11 | [Voyager Project Page](https://voyager.minedojo.org/)<br>（Voyager 示例和补充材料） | MineDojo / Voyager Team | 2023 | 项目页：技能库与长期任务 | 建议读 |
+| 12 | [AutoGen](https://arxiv.org/abs/2308.08155)<br>（多 Agent 对话协作框架） | Microsoft Research | 2023-08 | 论文：多 Agent | 建议读 |
+| 13 | [Microsoft Research: AutoGen](https://www.microsoft.com/en-us/research/publication/autogen-enabling-next-gen-llm-applications-via-multi-agent-conversation-framework/)<br>（AutoGen 官方研究介绍） | Microsoft Research | 2023 | 研究页面：多 Agent | 可选读 |
+| 14 | [SWE-agent](https://arxiv.org/abs/2405.15793)<br>（提出 Agent-Computer Interface 视角） | Princeton NLP | 2024-05 | 论文：软件工程 Agent | 必读 |
+| 15 | [A Survey on LLM-based Autonomous Agents](https://arxiv.org/abs/2308.11432)<br>（自主 Agent 构成、应用和挑战综述） | 学术论文作者团队 | 2023-08 | 综述：自主 Agent 综述 | 进阶读 |
+| 16 | [Survey on Evaluation of LLM-based Agents](https://arxiv.org/abs/2503.16416)<br>（Agent 评估对象、基准和方法综述） | 学术论文作者团队 | 2025-03 | 综述：评估体系 | 进阶读 |
+| 17 | [Lost in the Middle](https://arxiv.org/abs/2307.03172)<br>（说明长上下文中的信息利用问题） | Stanford / UC Berkeley 等 | 2023-07 | 论文：上下文工程 | 必读 |
+| 18 | [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)<br>（checkpoint、thread、resume 工程参考） | LangChain | 持续更新 | 工程文档：状态与恢复 | 必读 |
+| 19 | [LangChain / Deep Agents Memory](https://docs.langchain.com/oss/python/deepagents/long-term-memory)<br>（长期记忆保存、读取和使用参考） | LangChain | 持续更新 | 工程文档：记忆系统 | 建议读 |
+| 20 | [LangChain Memory Overview](https://docs.langchain.com/oss/python/concepts/memory)<br>（短期记忆与长期记忆概念边界） | LangChain | 持续更新 | 工程文档：记忆系统 | 建议读 |
+| 21 | [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/)<br>（Agent run 的结构化 trace 事件） | OpenAI | 持续更新 | 工程文档：Trace 与观测 | 必读 |
+| 22 | [OpenAI Agents SDK Guardrails](https://openai.github.io/openai-agents-js/guides/guardrails/)<br>（输入、输出、工具调用的护栏机制） | OpenAI | 持续更新 | 工程文档：安全与护栏 | 必读 |
+| 23 | [Langfuse Documentation](https://langfuse.com/docs/)<br>（LLM trace、prompt、dataset 与 eval 平台） | Langfuse | 持续更新 | 工程文档：Trace 与观测 | 建议读 |
+| 24 | [LangSmith Documentation](https://docs.smith.langchain.com/)<br>（LangChain 生态观测与评估平台） | LangChain | 持续更新 | 工程文档：Trace 与评估 | 建议读 |
+| 25 | [Arize Phoenix Documentation](https://arize.com/docs/phoenix)<br>（开源观测、评估和实验分析工具） | Arize AI | 持续更新 | 工程文档：Trace 与评估 | 建议读 |
+| 26 | [AgentOps Documentation](https://docs.agentops.ai/v2/usage/tracking-agents)<br>（Agent 观测、调试、成本和 replay） | AgentOps | 持续更新 | 工程文档：Agent 观测工具 | 进阶读 |
+| 27 | [AgentTrace: Structured Logging Framework](https://arxiv.org/abs/2602.10133)<br>（分层记录 Agent 运行轨迹） | 学术论文作者团队 | 2026-02 | 论文：Trace 与复盘 | 进阶读 |
+| 28 | [Model Context Protocol Specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/index)<br>（模型连接工具、资源和服务的协议） | Model Context Protocol | 2025-06 | 协议文档：工具协议 | 建议读 |
+| 29 | [The Bitter Lesson](http://www.incompleteideas.net/IncIdeas/BitterLesson.html)<br>（关于通用计算和学习方法的长期判断） | Rich Sutton | 2019-03 | 思想文章：底层思想 | 建议读 |
+| 30 | [Software 2.0](https://karpathy.github.io/2017/11/11/software2/)<br>（从手写逻辑到模型逻辑的软件观） | Andrej Karpathy | 2017-11 | 思想文章：底层思想 | 建议读 |
+| 31 | [BDI Agent Architecture](https://learn.microsoft.com/en-us/archive/msdn-magazine/2019/january/machine-learning-leveraging-the-beliefs-desires-intentions-agent-architecture)<br>（传统智能体 Belief / Desire / Intention 结构） | Microsoft Learn / MSDN Magazine | 2019-01 | 经典智能体架构介绍：传统智能体理论 | 可选读 |
+
+### 如何看待发布时间
+
+这份资料表中有不少文章和论文已经发布多年，这不是缺点。Agent 领域变化很快，但并不是所有知识都按同样速度过期。更合理的读法是按知识层次判断资料价值，而不是只按发布时间排序。
+
+| 时间层 | 代表资料 | 主要价值 |
+|--------|----------|----------|
+| 经典思想层 | [The Bitter Lesson](http://www.incompleteideas.net/IncIdeas/BitterLesson.html)、[Software 2.0](https://karpathy.github.io/2017/11/11/software2/)、[BDI Agent Architecture](https://learn.microsoft.com/en-us/archive/msdn-magazine/2019/january/machine-learning-leveraging-the-beliefs-desires-intentions-agent-architecture) | 帮助理解 Agent 为什么不同于传统软件，也为什么不能完全依赖手写规则。 |
+| Agent 基础范式层 | [ReAct](https://arxiv.org/abs/2210.03629)、[Toolformer](https://arxiv.org/abs/2302.04761)、[Reflexion](https://arxiv.org/abs/2303.11366)、[Generative Agents](https://arxiv.org/abs/2304.03442)、[Voyager](https://arxiv.org/abs/2305.16291) | 定义了推理-行动循环、工具使用、反思、记忆和技能库等基础机制，虽然发布较早，但仍是很多系统的底层模式。 |
+| 工程化层 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)、[OpenAI Agents Guide](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf)、[LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)、[Langfuse](https://langfuse.com/docs/)、[MCP](https://modelcontextprotocol.io/specification/2025-06-18/basic/index) | 更接近当前实践，涉及 runtime、trace、guardrail、checkpoint、tool protocol 等工程能力，需要关注最新版本。 |
+| 近期研究层 | [SWE-agent](https://arxiv.org/abs/2405.15793)、[Survey on Evaluation of LLM-based Agents](https://arxiv.org/abs/2503.16416)、[AgentTrace](https://arxiv.org/abs/2602.10133) | 更贴近代码 Agent、评估、trace、观测和复盘等当前热点，可以作为后续工程验证的参考。 |
+
+因此，阅读顺序不应简单追新。像 ReAct 虽然是 2022 年的论文，但 Thought / Action / Observation 循环仍然是理解 Agent Runtime 的基础；Generative Agents 虽然是 2023 年的论文，但它对 memory / retrieval / reflection 的拆分仍有参考价值。真正需要频繁更新的是工程化资料，例如框架文档、SDK、观测平台和协议规范。
+
+### 英文资料阅读策略
+
+这些资料大多是英文论文、官方文档和工程文章，逐字阅读会很慢，也容易被术语和细节拖住。后续阅读应采用“中文导读先行、英文原文精读关键部分”的方式。
+
+| 层次 | 做法 | 目标 |
+|------|------|------|
+| 第一层：中文导读 | 先为每篇资料整理中文导读，说明背景、核心问题、关键概念和当前项目关系。 | 快速判断资料价值，建立阅读框架。 |
+| 第二层：结构化摘要 | 对重点资料整理 1-2 页中文摘要，保留关键英文术语。 | 形成可复用笔记，避免每次重新读原文。 |
+| 第三层：带问题精读 | 只精读与当前项目强相关的章节，例如 ReAct 的 action / observation，LangGraph 的 checkpoint / resume。 | 避免全文平均用力，把阅读转成工程判断。 |
+| 第四层：术语表 | 沉淀 Agent 常见英文术语中英对照，例如 orchestration、handoff、guardrail、trace、artifact。 | 降低后续阅读成本。 |
+| 第五层：实践映射 | 每读完一篇资料，都记录它对 Context、Memory、Checkpoint、Artifact、Trace、Tool Policy 或 Runtime Core 的启发。 | 把阅读转化为后续可验证的实践点。 |
+
+后续可以为重点资料建立独立中文导读文件：
+
+```text
+docs/concepts/readings/
+  01-building-effective-agents-cn-notes.md
+  02-react-cn-notes.md
+  03-toolformer-cn-notes.md
+  04-generative-agents-cn-notes.md
+  05-langgraph-persistence-cn-notes.md
+```
+
+每篇中文导读建议使用统一结构：
+
+```markdown
+# 中文导读：资料名称
+
+## 这篇资料解决什么问题
+## 核心概念
+## 关键术语
+## 最值得精读的部分
+## 和当前项目的关系
+## 可以转化为实践的点
+## 不需要深读的部分
+```
+
+这个策略的重点是：先用中文导读建立结构，再对关键英文段落精读。Agent 资料阅读不应变成语言负担，而应服务于当前项目的概念澄清和工程验证。
 
 ## 目录
 
 - [资料汇总](#资料汇总)
+- [如何看待发布时间](#如何看待发布时间)
+- [英文资料阅读策略](#英文资料阅读策略)
 - [一、为什么需要扩大学习范围](#一为什么需要扩大学习范围)
 - [二、阅读路线总览](#二阅读路线总览)
 - [三、第一组：Agent 工程总论和实践方法](#三第一组agent-工程总论和实践方法)
