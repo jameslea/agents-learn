@@ -38,7 +38,7 @@ class ArtifactRecord(BaseModel):
         default_factory=dict,
         description="结构化产物内容。ContextBuilder 默认不读取该字段。",
     )
-    validated: bool = Field(default=True, description="artifact 是否通过 schema 或人工验证。")
+    validated: bool = Field(default=False, description="artifact 是否通过 schema 或人工验证。")
     created_at: str = Field(default_factory=utc_now, description="创建时间，UTC ISO 格式。")
     sensitive: bool = Field(default=False, description="摘要或引用信息是否包含敏感内容。")
     metadata: dict[str, Any] = Field(default_factory=dict, description="扩展元数据。")

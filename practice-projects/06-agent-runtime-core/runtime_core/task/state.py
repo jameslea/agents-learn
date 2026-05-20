@@ -1,27 +1,12 @@
 from __future__ import annotations
 
-"""Runtime Core 的任务状态模型。
-
-State 保存一次 Agent 任务已经执行到哪里，以及每个 step 的状态和摘要。
-它不是长期记忆，也不是 artifact store；它只描述当前任务的执行进度。
-
-主要类与关系：
-- StepStatus：单个 step 的状态枚举。
-- StepExecution：单个 step 的输入、输出、时间和错误摘要。
-- RuntimeState：一次任务的运行状态，可为 ContextBuilder 提供最近 step 摘要。
-
-典型关系：
-TaskContract -> RuntimeState
-RuntimeState.steps -> ContextBuilder 最近 step 摘要
-"""
-
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from runtime_core.contracts import TaskContract
+from runtime_core.task.contract import TaskContract
 
 
 def utc_now() -> str:
@@ -48,18 +33,11 @@ class StepStatus(str, Enum):
 
 
 class StepExecution(BaseModel):
-    """单个 Runtime step 的执行记录。
-
-    StepExecution 保存的是摘要，不保存完整输入输出正文。完整产物应进入
-    artifact，完整执行过程应进入 trace。
-    """
+    """单个 Runtime step 的执行记录。"""
 
     step_id: str = Field(description="step 唯一标识，用于恢复、跳过和 trace 关联。")
     name: str = Field(description="面向人类阅读的 step 名称。")
-    status: StepStatus = Field(
-        default=StepStatus.PENDING,
-        description="当前 step 状态。",
-    )
+    status: StepStatus = Field(default=StepStatus.PENDING, description="当前 step 状态。")
     started_at: str | None = Field(default=None, description="step 开始时间，UTC ISO 格式。")
     finished_at: str | None = Field(default=None, description="step 结束时间，UTC ISO 格式。")
     inputs_summary: dict[str, Any] = Field(
@@ -139,6 +117,17 @@ class RuntimeState(BaseModel):
         step.finished_at = utc_now()
         step.error = error
         self.status = "failed"
+        if self.current_step_id == step_id:
+            self.current_step_id = None
+        return step
+
+    def block_step(self, *, step_id: str, error: str) -> StepExecution:
+        """将 step 标记为 BLOCKED，并同步任务整体状态。"""
+        step = self._find_step(step_id)
+        step.status = StepStatus.BLOCKED
+        step.finished_at = utc_now()
+        step.error = error
+        self.status = "blocked"
         if self.current_step_id == step_id:
             self.current_step_id = None
         return step

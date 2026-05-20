@@ -4,10 +4,10 @@ from datetime import datetime, timedelta, timezone
 
 from runtime_core.artifact import ArtifactRecord
 from runtime_core.context import ContextBuilder, ContextPolicy, ContextSourceType
-from runtime_core.contracts import TaskContract, TaskType
+from runtime_core.task import TaskContract, TaskType
 from runtime_core.memory import MemoryQuery, MemoryRecord, MemoryStatus, MemoryStore
 from runtime_core.memory import MemoryWriteAction, MemoryWriteGate, MemoryWriteProposal, MemoryWriteSource
-from runtime_core.state import RuntimeState
+from runtime_core.task import RuntimeState
 
 
 def _contract() -> TaskContract:

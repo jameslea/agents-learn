@@ -33,8 +33,8 @@ from runtime_core.context import (
     ContextVisibility,
     MemoryCandidate,
 )
-from runtime_core.contracts import TaskContract, TaskType
-from runtime_core.state import RuntimeState
+from runtime_core.task import TaskContract, TaskType
+from runtime_core.task import RuntimeState
 
 
 def build_demo_bundle() -> ContextBundle:

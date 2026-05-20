@@ -5,7 +5,7 @@
 - [能力定位](#能力定位)
 - [当前状态](#当前状态)
 - [对应代码](#对应代码)
-- [`runtime_core/context.py` 代码结构说明](#runtime_corecontextpy-代码结构说明)
+- [`runtime_core/context/` 代码结构说明](#runtime_corecontext-代码结构说明)
   - [枚举层](#枚举层)
   - [数据模型层](#数据模型层)
   - [构造入口](#构造入口)
@@ -60,22 +60,21 @@ Context Builder 验证一个核心判断：
 ## 对应代码
 
 ```text
-runtime_core/contracts.py
-runtime_core/state.py
-runtime_core/context.py
+runtime_core/task/
+runtime_core/context/
 scripts/run_context_demo.py
 tests/test_context_builder.py
 ```
 
-## `runtime_core/context.py` 代码结构说明
+## `runtime_core/context/` 代码结构说明
 
-`context.py` 是阶段 1 的主要实现文件，代码可以按五层理解：
+`runtime_core/context/` 是阶段 1 的主要实现目录，代码可以按五层理解：
 
-1. 枚举层：定义上下文来源、可见性和信任等级。
-2. 数据模型层：定义 candidate、item、bundle、policy、metrics 等结构化对象。
-3. 构造入口：`ContextBuilder.build()` 负责串联一次完整上下文构造。
-4. 选择规则：私有方法负责最近 step、memory、candidate、预算和 required context 筛选。
-5. 辅助函数：tag 规范化和过期时间判断。
+1. 来源层：`source.py` 定义上下文来源、可见性和信任等级。
+2. 数据模型层：`candidate.py`、`bundle.py`、`selection.py`、`policy.py` 定义结构化对象。
+3. 构造入口：`builder.py` 中的 `ContextBuilder.build()` 负责串联一次完整上下文构造。
+4. 选择规则：`builder.py` 和 `rules/` 负责最近 step、memory、candidate、预算和 required context 筛选。
+5. 包级出口：`__init__.py` 统一导出常用类型，调用方仍可使用 `from runtime_core.context import ContextBuilder`。
 
 ### 枚举层
 
@@ -142,7 +141,7 @@ ContextBundle 表示一次 step 可使用的完整上下文包
 
 ### 当前代码边界
 
-`context.py` 当前有意保留了一些轻量实现，目的是先验证上下文工程的核心机制：
+`runtime_core/context/` 当前有意保留了一些轻量规则，目的是先验证上下文工程的核心机制：
 
 - tag overlap 只是最小相关性判断，不是最终检索方案。
 - `MemoryCandidate` 只是阶段 1 过渡模型，后续会拆到 Memory / State 分层。
@@ -151,11 +150,11 @@ ContextBundle 表示一次 step 可使用的完整上下文包
 - 安全处理目前只做 sensitive / untrusted / runtime-only 拦截，还不是完整 prompt injection 防护。
 - 预算按字符估算，后续可以替换为 token 估算。
 
-因此阅读这个文件时，应把它理解为 Context Builder 的最小可运行核心，而不是完整生产级上下文系统。
+因此阅读这个目录时，应把它理解为 Context Builder 的最小可运行核心，而不是完整生产级上下文系统。
 
 ### Python 模块组织经验
 
-`context.py` 当前把 enum、候选模型、输出模型、策略、选择逻辑、预算控制和 builder 主流程放在同一个文件中。这在 Python 探索阶段可以接受，因为它减少了早期文件跳转成本；但如果继续堆叠，就会变成不利于理解和维护的“大杂烩模块”。
+当前实现已经把 enum、候选模型、输出模型、策略、选择逻辑和 builder 主流程拆入 `runtime_core/context/` 目录。早期单文件探索降低了启动成本，但继续堆叠会变成不利于理解和维护的“大杂烩模块”。
 
 更合理的 Python 组织方式不是机械模仿 Java 的“一类一文件”，也不是把所有 Pydantic model 统一塞进 `models.py`。更好的粒度是按概念职责拆分模块，让文件名表达它在 Context Builder 中扮演的角色：
 
@@ -165,8 +164,11 @@ runtime_core/context/
   candidate.py    # 候选上下文，包括 artifact / memory 过渡候选
   policy.py       # 上下文选择策略
   selection.py    # 选择日志和进入/排除原因
-  output.py       # ContextItem、ContextBundle、ContextMetrics
-  budget.py       # 单条截断和整体预算控制
+  bundle.py       # ContextItem、ContextBundle
+  rules/
+    relevance.py  # tag 规范化、过期判断和相关性评分
+    budget.py     # 单条截断和整体预算裁剪
+    required.py   # required source / artifact 检查
   builder.py      # ContextBuilder 主流程
 ```
 
@@ -312,7 +314,7 @@ Context Builder 不是把所有资料塞给模型，
 
 ## 核心字段说明
 
-文档只记录理解代码所需的核心字段。更完整的字段说明见 `runtime_core/context.py` 中的类 docstring 和 `Field(description=...)`。
+文档只记录理解代码所需的核心字段。更完整的字段说明见 `runtime_core/context/` 中的类 docstring 和 `Field(description=...)`。
 
 ### ContextCandidate
 

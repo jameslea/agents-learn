@@ -29,8 +29,8 @@ Artifact：任务内或跨任务可引用产物
 新增或整理：
 
 ```text
-runtime_core/memory.py
-runtime_core/artifact.py
+runtime_core/memory/
+runtime_core/artifact/
 tests/test_memory_state_boundaries.py
 scripts/run_memory_state_demo.py
 ```
@@ -38,7 +38,7 @@ scripts/run_memory_state_demo.py
 同时更新：
 
 ```text
-runtime_core/context.py
+runtime_core/context/
 runtime_core/__init__.py
 README.md
 docs/agent-core-capabilities-validation-plan.md

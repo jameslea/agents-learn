@@ -1,19 +1,5 @@
 from __future__ import annotations
 
-"""Runtime Core 的任务入口契约。
-
-TaskContract 用于在 Agent 运行前明确任务目标、类型、输入、期望产物和成功标准。
-它避免 Runtime 只接收一段自然语言目标后就自由发挥。
-
-主要类与关系：
-- TaskType：任务类型枚举，当前只保留新 Runtime Core 小步验证所需类型。
-- TaskContract：一次 Runtime 任务的入口协议，供 ContextBuilder、State 和后续 StepRunner 使用。
-
-典型关系：
-TaskContract -> RuntimeState.from_contract(...)
-TaskContract + RuntimeState -> ContextBuilder.build(...)
-"""
-
 from enum import Enum
 from typing import Any
 
@@ -31,7 +17,6 @@ class TaskType(str, Enum):
     RESEARCH = "research"
     CODE_REVIEW = "code_review"
     CONTENT_GENERATION = "content_generation"
-
 
 class TaskContract(BaseModel):
     """一次 Runtime 任务的入口协议。
