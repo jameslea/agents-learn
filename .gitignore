@@ -38,6 +38,8 @@ venv/
 *.swp
 *.swo
 
+.antigravitycli/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -78,3 +80,4 @@ explorations/
 practice-projects/03-autonomous-research/*.sqlite
 practice-projects/03-autonomous-research/search_cache.json
 practice-projects/03-autonomous-research/*.sqlite*
+
