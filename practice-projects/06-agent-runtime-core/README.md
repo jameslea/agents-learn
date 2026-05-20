@@ -19,6 +19,7 @@ Agent 系统非功能能力的横向总览见：[agent-non-functional-capabiliti
 阶段 5：Trace 与复盘已完成最小验证。
 阶段 6：最小 Runtime 串联已完成最小验证。
 阶段 7：code_review_mini 场景试验已完成最小验证。
+阶段 8：Workflow / Agent 选择策略已完成文档化。
 
 已具备：
 
@@ -146,6 +147,7 @@ practice-projects/06-agent-runtime-core/
     05-trace-replay.md
     06-minimal-runtime.md
     07-code-review-mini.md
+    08-workflow-agent-selection.md
     agent-non-functional-capabilities-overview.md
     runtime-core-architecture.md
   runtime_core/
@@ -222,7 +224,7 @@ practice-projects/06-agent-runtime-core/
 
 ## 文档与代码组织关系
 
-`docs/` 按验证阶段组织，回答“这个能力为什么重要、如何验证、有哪些经验教训”。
+`docs/` 按验证阶段和场景设计方法组织，回答“这个能力为什么重要、如何验证、有哪些经验教训，以及新场景应如何选择 workflow / agent 模式”。
 `runtime_core/` 按 Runtime 领域职责组织，回答“这些能力在代码中由哪些公共模块承载”。
 
 二者不是一一对应关系。同一个阶段通常会涉及多个代码包，同一个代码包也可能被多个阶段复用。
@@ -235,6 +237,8 @@ practice-projects/06-agent-runtime-core/
 | `04-schema-artifact.md` | `artifact/`、`scenarios/research_mini/schemas.py` | Runtime 只提供 artifact 记录和 store，具体 schema 属于场景 |
 | `05-trace-replay.md` | `observability/trace/` | JSONL trace、读取、复盘和脱敏 |
 | `06-minimal-runtime.md` | `execution/`、`scenarios/research_mini/` | 最小 Runtime 串联、工具策略和具体场景 |
+| `07-code-review-mini.md` | `execution/`、`scenarios/code_review_mini/` | 代码审查场景驱动 Runtime Core 复用 |
+| `08-workflow-agent-selection.md` | 场景设计前置判断 | 判断任务应采用 workflow、agentic workflow 还是 autonomous agent |
 
 因此，后续阅读时应先按阶段文档理解能力，再按代码包查看实现边界。
 
@@ -252,6 +256,7 @@ practice-projects/06-agent-runtime-core/
 | 5 | Trace 与复盘 | completed | [05-trace-replay.md](docs/05-trace-replay.md) |
 | 6 | 最小 Runtime 串联 | completed | [06-minimal-runtime.md](docs/06-minimal-runtime.md) |
 | 7 | code_review_mini 场景试验 | completed | [07-code-review-mini.md](docs/07-code-review-mini.md) |
+| 8 | Workflow / Agent 选择策略 | completed | [08-workflow-agent-selection.md](docs/08-workflow-agent-selection.md) |
 
 ## Public API 使用约定
 
