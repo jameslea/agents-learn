@@ -8,6 +8,8 @@
 
 Runtime Core 的包职责、公开 API 和依赖边界说明见：[runtime-core-architecture.md](docs/runtime-core-architecture.md)。
 
+Agent 系统非功能能力的横向总览见：[agent-non-functional-capabilities-overview.md](docs/agent-non-functional-capabilities-overview.md)。
+
 ## 当前进度
 
 阶段 1：Context Builder 已完成最小验证。
@@ -144,6 +146,7 @@ practice-projects/06-agent-runtime-core/
     05-trace-replay.md
     06-minimal-runtime.md
     07-code-review-mini.md
+    agent-non-functional-capabilities-overview.md
     runtime-core-architecture.md
   runtime_core/
     __init__.py
@@ -235,6 +238,7 @@ practice-projects/06-agent-runtime-core/
 
 因此，后续阅读时应先按阶段文档理解能力，再按代码包查看实现边界。
 
+非功能能力总览：[agent-non-functional-capabilities-overview.md](docs/agent-non-functional-capabilities-overview.md)。
 架构边界文档：[runtime-core-architecture.md](docs/runtime-core-architecture.md)。
 
 ## 阶段能力文档
@@ -267,17 +271,18 @@ from runtime_core.observability import TraceRecorder, FileCheckpointStore
 ## 建议阅读顺序
 
 1. 先读本文，理解项目范围和当前进度。
-2. 阅读 [01-context-builder.md](docs/01-context-builder.md)，理解已完成的 Context Builder。
-3. 阅读 [02-memory-state.md](docs/02-memory-state.md)，理解已完成的 Memory / State 分层边界。
-4. 阅读 [03-checkpoint-resume.md](docs/03-checkpoint-resume.md)，理解已完成的 checkpoint / resume 语义。
-5. 阅读 [04-schema-artifact.md](docs/04-schema-artifact.md)，理解已完成的 schema artifact 交接。
-6. 阅读 [05-trace-replay.md](docs/05-trace-replay.md)，理解已完成的 trace 与复盘语义。
-7. 阅读 [06-minimal-runtime.md](docs/06-minimal-runtime.md)，理解已完成的最小 Runtime 串联。
-8. 查看 `scripts/run_context_demo.py`，观察阶段 1 如何运行。
-9. 查看 `scripts/run_memory_state_demo.py`，观察阶段 2 如何区分 memory、state 和 artifact。
-10. 查看 `scripts/run_resume_demo.py`，观察阶段 3 如何从 checkpoint 恢复。
-11. 查看 `scripts/run_artifact_handoff_demo.py`，观察阶段 4 如何通过 schema artifact 交接。
-12. 查看 `scripts/run_trace_demo.py`，观察阶段 5 如何记录和复盘 trace。
+2. 阅读 [agent-non-functional-capabilities-overview.md](docs/agent-non-functional-capabilities-overview.md)，理解 Agent 系统非功能能力总览。
+3. 阅读 [01-context-builder.md](docs/01-context-builder.md)，理解已完成的 Context Builder。
+4. 阅读 [02-memory-state.md](docs/02-memory-state.md)，理解已完成的 Memory / State 分层边界。
+5. 阅读 [03-checkpoint-resume.md](docs/03-checkpoint-resume.md)，理解已完成的 checkpoint / resume 语义。
+6. 阅读 [04-schema-artifact.md](docs/04-schema-artifact.md)，理解已完成的 schema artifact 交接。
+7. 阅读 [05-trace-replay.md](docs/05-trace-replay.md)，理解已完成的 trace 与复盘语义。
+8. 阅读 [06-minimal-runtime.md](docs/06-minimal-runtime.md)，理解已完成的最小 Runtime 串联。
+9. 查看 `scripts/run_context_demo.py`，观察阶段 1 如何运行。
+10. 查看 `scripts/run_memory_state_demo.py`，观察阶段 2 如何区分 memory、state 和 artifact。
+11. 查看 `scripts/run_resume_demo.py`，观察阶段 3 如何从 checkpoint 恢复。
+12. 查看 `scripts/run_artifact_handoff_demo.py`，观察阶段 4 如何通过 schema artifact 交接。
+13. 查看 `scripts/run_trace_demo.py`，观察阶段 5 如何记录和复盘 trace。
 13. 查看 `scripts/run_research_mini.py`，观察阶段 6 如何串联完整流程。
 14. 查看 `tests/`，理解阶段 1-6 的验收规则。
 
