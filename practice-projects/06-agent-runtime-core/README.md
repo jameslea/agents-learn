@@ -16,6 +16,7 @@ Runtime Core 的包职责、公开 API 和依赖边界说明见：[runtime-core-
 阶段 4：Schema Artifact 交接已完成最小验证。
 阶段 5：Trace 与复盘已完成最小验证。
 阶段 6：最小 Runtime 串联已完成最小验证。
+阶段 7：code_review_mini 场景试验已完成最小验证。
 
 已具备：
 
@@ -36,6 +37,7 @@ Runtime Core 的包职责、公开 API 和依赖边界说明见：[runtime-core-
 - 最小 Runtime 串联器：`MinimalRuntime`。
 - 最小工具策略检查：`ToolPolicyChecker`。
 - `research_mini` 端到端场景。
+- `code_review_mini` 场景驱动 Runtime Core 复用试验。
 - 可见性、信任等级、敏感候选拦截和 required context 检查。
 - 可运行 demo 和测试。
 
@@ -92,6 +94,24 @@ python3 practice-projects/06-agent-runtime-core/scripts/run_trace_demo.py
 python3 practice-projects/06-agent-runtime-core/scripts/run_research_mini.py --reset
 ```
 
+运行代码审查场景 demo：
+
+```bash
+python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py --reset
+```
+
+使用真实 LLM 代码审查：
+
+```bash
+python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py --reset --llm
+```
+
+指定 LLM provider / model 并观察耗时：
+
+```bash
+python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py --reset --llm --provider minimax --model MiniMax-M2.7
+```
+
 演示中断后恢复：
 
 ```bash
@@ -123,6 +143,7 @@ practice-projects/06-agent-runtime-core/
     04-schema-artifact.md
     05-trace-replay.md
     06-minimal-runtime.md
+    07-code-review-mini.md
     runtime-core-architecture.md
   runtime_core/
     __init__.py
@@ -168,12 +189,19 @@ practice-projects/06-agent-runtime-core/
       contract.py
       state.py
   scenarios/
+    code_review_mini/
+      __init__.py
+      llm_reviewer.py
+      sample_target.py
+      schemas.py
+      scenario.py
     research_mini/
       __init__.py
       schemas.py
       scenario.py
   scripts/
     run_context_demo.py
+    run_code_review_mini.py
     run_artifact_handoff_demo.py
     run_memory_state_demo.py
     run_research_mini.py
@@ -219,6 +247,7 @@ practice-projects/06-agent-runtime-core/
 | 4 | Schema Artifact 交接 | completed | [04-schema-artifact.md](docs/04-schema-artifact.md) |
 | 5 | Trace 与复盘 | completed | [05-trace-replay.md](docs/05-trace-replay.md) |
 | 6 | 最小 Runtime 串联 | completed | [06-minimal-runtime.md](docs/06-minimal-runtime.md) |
+| 7 | code_review_mini 场景试验 | completed | [07-code-review-mini.md](docs/07-code-review-mini.md) |
 
 ## Public API 使用约定
 

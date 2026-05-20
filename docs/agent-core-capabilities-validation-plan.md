@@ -87,6 +87,7 @@ Model + Tools + Orchestration
 | 4 | Schema Artifact 交接 | completed | 见阶段 4 明细 | 见阶段 4 明细 | 已记录核心概念和经验教训 |
 | 5 | Trace 与复盘 | completed | 见阶段 5 明细 | 见阶段 5 明细 | 已记录核心概念和经验教训 |
 | 6 | 最小 Runtime 串联 | completed | 见阶段 6 明细 | 见阶段 6 明细 | 已记录核心概念和经验教训 |
+| 7 | code_review_mini 场景试验 | completed | 见阶段 7 明细 | 见阶段 7 明细 | 已记录核心概念和经验教训 |
 
 维护要求：
 
@@ -185,6 +186,7 @@ practice-projects/06-agent-runtime-core/
 | 阶段 4：Schema Artifact 交接 | `artifact/`、`scenarios/research_mini/schemas.py` | Runtime 提供 artifact 记录和 store，具体 schema 属于场景 |
 | 阶段 5：Trace 与复盘 | `observability/trace/` | JSONL trace、读取、复盘和脱敏 |
 | 阶段 6：最小 Runtime 串联 | `execution/`、`scenarios/research_mini/` | 最小 Runtime 串联和具体业务场景 |
+| 阶段 7：code_review_mini 场景试验 | `scenarios/code_review_mini/`、`execution/`、`artifact/`、`observability/` | 用具体代码审查场景验证 Runtime Core public API |
 
 核心对象建议保持少量：
 
@@ -476,6 +478,7 @@ research_mini：
 | 4 | completed | 2026-05-20 | 已完成 Schema Artifact 交接最小验证，新增 schema artifact、内存版 ArtifactStore、handoff demo 和测试 |
 | 5 | completed | 2026-05-20 | 已完成 Trace 与复盘最小验证，新增 JSONL trace recorder、reader、replay summary、trace demo 和测试 |
 | 6 | completed | 2026-05-20 | 已完成最小 Runtime 串联验证，新增 MinimalRuntime、ToolPolicyChecker、research_mini 场景、端到端 demo 和测试 |
+| 7 | completed | 2026-05-20 | 已完成 code_review_mini 场景试验，新增真实 LLM 可选 reviewer、schema artifact、blocked 演示、resume 演示和测试 |
 
 ### 阶段 1：Context Builder
 
@@ -657,3 +660,32 @@ research_mini：
   - 并行 demo 共享同一个 workdir 会污染 trace 和 checkpoint；真实 Runtime 需要明确 run id 或隔离目录。
   - 预算和延迟治理当前只通过 step 时间和 trace 观察，尚未形成完整预算系统。
 - 后续调整：可以把 JSONL trace 扩展为多 backend，增加 Langfuse sink；也可以将 artifact snapshot 演进为正式持久化 artifact store。
+
+### 阶段 7：code_review_mini 场景试验
+
+- 状态：completed
+- 完成日期：2026-05-20
+- 代码根目录：`practice-projects/06-agent-runtime-core/`
+- 相对文件：
+  - `scenarios/code_review_mini/`
+  - `scripts/run_code_review_mini.py`
+  - `tests/test_code_review_mini.py`
+  - `docs/07-code-review-mini.md`
+- 验证命令：
+  - `python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py --reset`
+  - `python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py --reset --stop-after llm_or_rule_review`
+  - `python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py`
+  - `python3 practice-projects/06-agent-runtime-core/scripts/run_code_review_mini.py --reset --force-blocked`
+  - `python3 -m pytest practice-projects/06-agent-runtime-core/tests`
+- 关键产物：`CodeSnapshot`、`CodeFinding`、`ReviewReport`、`PatchSuggestion`、`CodeReviewLLMReviewer`、`CodeReviewMiniRunResult`。
+- 核心概念：
+  - Runtime Core 的优化应由具体场景驱动，而不是预先建设生产级框架能力。
+  - 真实 LLM reviewer 属于场景能力，Runtime Core 只负责承载 artifact、trace、checkpoint、blocked 等公共机制。
+  - Patch suggestion 是结构化产物，不应等同于直接修改文件。
+  - Tool policy 可以判断风险和审批要求，但 blocked / preview / 继续执行的业务取舍仍由场景决定。
+- 经验教训：
+  - `MinimalRuntime` 可以支持非 research 场景，说明当前 public API 有一定可复用性。
+  - LLM 调用需要场景侧包装和 schema 校验，暂时不应抽成通用 LLM step adapter。
+  - 代码审查场景暴露出多文件、并行检查、测试执行和补丁应用等潜在需求，但这些都应继续留在后续场景验证中，不急着进入 core。
+  - 离线 reviewer 对测试稳定性有价值，真实 LLM 用 `--llm` 显式开启更适合当前阶段。
+- 后续调整：继续用新场景记录 Runtime Core 使用摩擦；当两个以上场景反复需要同一能力时，再考虑抽回 core。

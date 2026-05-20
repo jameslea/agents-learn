@@ -97,7 +97,7 @@ scenarios/<agent_name>/
 
 ## 当前验证
 
-当前使用 `research_mini` 场景验证这个结构：
+当前使用 `research_mini` 和 `code_review_mini` 两个场景验证这个结构：
 
 ```text
 plan_research
@@ -115,5 +115,12 @@ review_report -> ReviewResult
 - Checkpoint / Resume。
 - Trace / Replay。
 - Tool Policy 和 blocked 示例。
+
+`code_review_mini` 进一步验证：
+
+- 非 research 场景也能复用 Runtime Core public API。
+- 真实 LLM reviewer 可以作为场景侧能力接入，并通过 schema artifact 交接。
+- Patch suggestion 可以用 artifact 表达，而不是直接修改文件。
+- 工具审批和 blocked 的最终策略仍应由场景决定。
 
 因此当前目录结构可以先稳定下来。后续新增能力应优先放入现有六个包；只有当能力确实无法归类时，才考虑新增一级包。
