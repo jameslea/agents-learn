@@ -12,6 +12,7 @@
 | [agent-design-methodology.md](./agent-design-methodology.md) | Agent 设计方法论：从角色实验到可控系统 | 总结多 Agent 实践后的设计方法，强调 workflow、state、artifact、tool、eval 优先于角色命名，帮助判断一个任务是否真的需要 Agent。 |
 | [agent-core-structure.md](./agent-core-structure.md) | Agent 系统核心结构：模型、工具、编排、状态与运行时 | 结合主流研究、厂商白皮书、框架文档和当前项目启发，先从 Model / Tools / Orchestration 解释 Agent 一阶结构，再梳理类型谱系、上下文、记忆、artifact、trace 和 Runtime Core。 |
 | [agent-reading-roadmap.md](./agent-reading-roadmap.md) | Agent 深度学习阅读路线：经典文章、公开论文与工程文档 | 在当前多轮 Agent 实践和 Runtime Core 探索基础上，整理后续扩大学习范围的经典文章、公开论文、工程文档和阅读顺序，并说明它们与上下文、记忆、工具、状态、artifact、trace 和 runtime 的关系。 |
+| [agent-development-capability-and-interview.md](./agent-development-capability-and-interview.md) | Agent 开发能力定位与面试准备 | 说明读完 Agent 必读资料并结合当前实践后，大致能达到什么工程能力，面试 Agent 开发岗时如何定位，以及还需要继续强化哪些能力。 |
 | [agent-context-engineering.md](./agent-context-engineering.md) | Agent 上下文工程：从 Prompt 拼接到可治理的工作视图 | 专题讨论 Agent 上下文类型分层、生命周期、Context Builder、上下文污染治理、上下文评估和后续 Runtime Core 实现优先级。 |
 | [agent-theory-to-practice.md](./agent-theory-to-practice.md) | Agent 从理论到实践：问题、失败模式与工程应对 | 连接 Agent 核心理论和真实项目实践，按 Model、Tools、Orchestration、Context、State、Artifact、Evaluation、Multi-Agent、Runtime 梳理落地时的常见问题和应对原则。 |
 | [agent-runtime-philosophy.md](./agent-runtime-philosophy.md) | Agent Runtime 哲学：从 Agent 能力到运行时治理 | 从 A/B/C/D-lite 实践出发，讨论 Agent 产品化为什么需要状态持久化、上下文治理、工具权限、安全边界、trace、评估和人工介入等运行时能力。 |
@@ -30,12 +31,13 @@
 2. [agent-design-methodology.md](./agent-design-methodology.md)
 3. [agent-core-structure.md](./agent-core-structure.md)
 4. [agent-reading-roadmap.md](./agent-reading-roadmap.md)
-5. [agent-context-engineering.md](./agent-context-engineering.md)
-6. [agent-theory-to-practice.md](./agent-theory-to-practice.md)
-7. [agent-runtime-philosophy.md](./agent-runtime-philosophy.md)
-8. [agent-system-boundaries.md](./agent-system-boundaries.md)
-9. [agent-frameworks-and-services-landscape.md](./agent-frameworks-and-services-landscape.md)
-10. [multimodal-agent-capabilities-landscape.md](./multimodal-agent-capabilities-landscape.md)
+5. [agent-development-capability-and-interview.md](./agent-development-capability-and-interview.md)
+6. [agent-context-engineering.md](./agent-context-engineering.md)
+7. [agent-theory-to-practice.md](./agent-theory-to-practice.md)
+8. [agent-runtime-philosophy.md](./agent-runtime-philosophy.md)
+9. [agent-system-boundaries.md](./agent-system-boundaries.md)
+10. [agent-frameworks-and-services-landscape.md](./agent-frameworks-and-services-landscape.md)
+11. [multimodal-agent-capabilities-landscape.md](./multimodal-agent-capabilities-landscape.md)
 
 如果目标是补充具体工程能力，可以按专题阅读：
 
@@ -46,6 +48,7 @@
 | 成本、延迟和缓存 | [agent-caching-strategies.md](./agent-caching-strategies.md) |
 | Agent 系统核心结构 | [agent-core-structure.md](./agent-core-structure.md) |
 | Agent 经典文章、论文和工程文档阅读路线 | [agent-reading-roadmap.md](./agent-reading-roadmap.md) |
+| Agent 开发能力和面试定位 | [agent-development-capability-and-interview.md](./agent-development-capability-and-interview.md) |
 | Agent 上下文工程 | [agent-context-engineering.md](./agent-context-engineering.md) |
 | Agent 从理论到实践 | [agent-theory-to-practice.md](./agent-theory-to-practice.md) |
 | Agent Runtime / 项目 E 定位 | [agent-core-structure.md](./agent-core-structure.md)、[agent-theory-to-practice.md](./agent-theory-to-practice.md)、[agent-runtime-philosophy.md](./agent-runtime-philosophy.md)、[agent-system-boundaries.md](./agent-system-boundaries.md)、[agent-frameworks-and-services-landscape.md](./agent-frameworks-and-services-landscape.md) |
